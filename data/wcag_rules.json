@@ -1,0 +1,26 @@
+[
+  {
+    "wcag_id": "1.1.1",
+    "level": "A",
+    "description": "Non-text Content",
+    "logic": "Images must have alt text"
+  },
+  {
+    "wcag_id": "1.4.1",
+    "level": "A",
+    "description": "Use of Color",
+    "logic": "Color should not be the only means of conveying information"
+  },
+  {
+    "wcag_id": "2.1.1",
+    "level": "A",
+    "description": "Keyboard",
+    "logic": "All functionality should be available via keyboard"
+  },
+  {
+    "wcag_id": "3.1.1",
+    "level": "A",
+    "description": "Language of Page",
+    "logic": "HTML tag must have lang attribute"
+  }
+]
