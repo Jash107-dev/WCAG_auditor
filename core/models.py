@@ -1,9 +1,5 @@
 from django.db import models
 
-# Create your models here.
-
-
-from django.db import models
 
 class Project(models.Model):
     domain = models.URLField()
@@ -27,9 +23,13 @@ class Page(models.Model):
 
 class Rule(models.Model):
     wcag_id = models.CharField(max_length=20)
+    title = models.CharField(max_length=100)
     level = models.CharField(max_length=10)
+    category = models.CharField(max_length=50)
+    check_type = models.CharField(max_length=20)
     description = models.TextField()
     logic = models.TextField()
+    fix_suggestion = models.TextField()
 
     def __str__(self):
         return self.wcag_id
