@@ -12,11 +12,15 @@ def is_valid_url(url, domain):
     return urlparse(url).netloc == domain
 
 
-def crawl(project_id, start_url, max_pages=10):
-    project = Project.objects.get(id=project_id)
+def crawl(start_url, max_pages=10):
     visited_urls = set()
     domain = urlparse(start_url).netloc
     queue = [start_url]
+
+    project, _ = Project.objects.get_or_create(
+        domain=start_url,
+        defaults={'wcag_level': 'A', 'status': 'pending'}
+    )
 
     while queue and len(visited_urls) < max_pages:
         url = queue.pop(0)
