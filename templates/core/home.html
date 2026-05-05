@@ -140,13 +140,11 @@
 
 <script>
 var domainOnly = true;
-
 function toggleDomainOnly() {
     domainOnly = !domainOnly;
     var knob = document.getElementById("toggleKnob");
     var sw = document.getElementById("toggleSwitch");
     var inp = document.getElementById("domainOnlyInput");
-
     if (domainOnly) {
         sw.style.background = "#6c63ff";
         knob.style.right = "3px";
@@ -159,41 +157,42 @@ function toggleDomainOnly() {
         inp.value = "false";
     }
 }
-
-var statusMessages = [
-    "Connecting to website...",
-    "Crawling pages...",
-    "Analyzing accessibility...",
-    "Checking WCAG rules...",
-    "Calculating compliance...",
-    "Almost done..."
-];
-
-document.getElementById("scanForm").addEventListener("submit", function() {
+var projectId = null;
+var checkInterval = null;
+document.getElementById("scanForm").addEventListener("submit", function(e) {
     var overlay = document.getElementById("loadingOverlay");
     overlay.style.display = "flex";
-
-    var bar = document.getElementById("progressBar");
-    var txt = document.getElementById("progressText");
-    var statusTxt = document.getElementById("scanStatusText");
-
-    var progress = 0;
-    var msgIndex = 0;
-
-    var interval = setInterval(function() {
-        if (progress < 90) {
-            progress = progress + Math.random() * 8;
-            if (progress > 90) progress = 90;
-            bar.style.width = progress + "%";
-            txt.textContent = Math.round(progress) + "% complete";
-        }
-
-        if (msgIndex < statusMessages.length - 1) {
-            msgIndex = msgIndex + 1;
-            statusTxt.textContent = statusMessages[msgIndex];
-        }
-    }, 2500);
+    var form = e.target;
+    var formData = new FormData(form);
+    e.preventDefault();
+    fetch(form.action, {method: 'POST', body: formData}).then(response => {
+        var redirectUrl = response.url;
+        projectId = redirectUrl.split('/dashboard/')[1].replace('/', '');
+        checkInterval = setInterval(checkCrawlStatus, 1000);
+    });
 });
+function checkCrawlStatus() {
+    if (!projectId) return;
+    fetch('/crawl-status/' + projectId + '/').then(response => response.json()).then(data => {
+        var statusTxt = document.getElementById("scanStatusText");
+        var progressTxt = document.getElementById("progressText");
+        var bar = document.getElementById("progressBar");
+        if (data.status === "crawling") {
+            var percent = data.total_pages > 0 ? Math.round((data.pages_crawled / data.total_pages) * 100) : 0;
+            bar.style.width = percent + "%";
+            statusTxt.textContent = "Crawling: " + data.current_page;
+            progressTxt.textContent = "Page " + data.pages_crawled + " of " + data.total_pages;
+        } else if (data.status === "crawled") {
+            clearInterval(checkInterval);
+            bar.style.width = "100%";
+            statusTxt.textContent = "Scan complete!";
+            progressTxt.textContent = "Redirecting...";
+            setTimeout(function() {
+                window.location.href = "/dashboard/" + projectId + "/";
+            }, 1000);
+        }
+    });
+}
 </script>
 
 {% endblock %}

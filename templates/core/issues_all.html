@@ -44,36 +44,44 @@
 
 <div class="card">
     <h3 style="font-size:15px; font-weight:700; color:#1a1f36; margin-bottom:20px;">All Issues</h3>
-
-    <table style="width:100%; border-collapse:collapse; font-size:13px;">
-        <thead>
-            <tr style="border-bottom:2px solid #f0f2f5;">
-                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Rule</th>
-                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Severity</th>
-                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Message</th>
-                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Page</th>
-                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Project</th>
-                <th style="padding:10px;"></th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for issue in issues %}
-            <tr style="border-bottom:1px solid #f0f2f5;">
-                <td style="padding:10px; font-weight:700; color:#6c63ff;">{{ issue.rule.wcag_id }}</td>
-                <td style="padding:10px;">
-                    <span class="severity-{{ issue.severity }}">{{ issue.severity|capfirst }}</span>
-                </td>
-                <td style="padding:10px; color:#4a5568;">{{ issue.message|truncatechars:55 }}</td>
-                <td style="padding:10px; font-size:12px; color:#8892b0;">{{ issue.page.url|truncatechars:30 }}</td>
-                <td style="padding:10px; font-size:12px; color:#8892b0;">{{ issue.page.project.domain|truncatechars:25 }}</td>
-                <td style="padding:10px;">
-                    <a href="/reporting/page/{{ issue.page.id }}/" class="btn-outline" style="padding:4px 12px; font-size:12px;">View</a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="6" style="padding:30px; text-align:center; color:#8892b0;">No issues found. <a href="/" style="color:#6c63ff;">Start a scan</a></td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    {% for project_id, data in issues_by_project.items %}
+    <div style="margin-bottom:40px; padding:20px; background:#f8f9fa; border-radius:12px; border-left:4px solid #6c63ff;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <div>
+                <h4 style="font-size:16px; font-weight:700; color:#1a1f36; margin-bottom:4px;">{{ data.project.domain }}</h4>
+                <p style="font-size:12px; color:#8892b0;">Scanned on {{ data.project.created_at|date:"M d, Y" }} • {{ data.issues|length }} issue{{ data.issues|length|pluralize }}</p>
+            </div>
+            <a href="/dashboard/{{ data.project.id }}/" class="btn-outline" style="padding:6px 16px; font-size:12px;">View Project</a>
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:13px; background:white; border-radius:8px; overflow:hidden;">
+            <thead>
+                <tr style="border-bottom:2px solid #f0f2f5; background:#fafbfc;">
+                    <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Rule</th>
+                    <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Severity</th>
+                    <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Message</th>
+                    <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Page</th>
+                    <th style="padding:10px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for issue in data.issues %}
+                <tr style="border-bottom:1px solid #f0f2f5;">
+                    <td style="padding:10px; font-weight:700; color:#6c63ff;">{{ issue.rule.wcag_id }}</td>
+                    <td style="padding:10px;">
+                        <span class="severity-{{ issue.severity }}">{{ issue.severity|capfirst }}</span>
+                    </td>
+                    <td style="padding:10px; color:#4a5568;">{{ issue.message|truncatechars:60 }}</td>
+                    <td style="padding:10px; font-size:12px; color:#8892b0;">{{ issue.page.url|truncatechars:40 }}</td>
+                    <td style="padding:10px;">
+                        <a href="/reporting/page/{{ issue.page.id }}/" class="btn-outline" style="padding:4px 12px; font-size:12px;">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% empty %}
+    <div style="padding:40px; text-align:center; color:#8892b0;">No issues found. <a href="/" style="color:#6c63ff; text-decoration:none; font-weight:600;">Start a scan</a></div>
+    {% endfor %}
 </div>
 {% endblock %}
