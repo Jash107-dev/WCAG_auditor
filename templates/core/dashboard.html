@@ -121,7 +121,11 @@
         <h3 style="font-size:14px; font-weight:700; color:#1a1f36; margin-bottom:16px;">Compliance Overview</h3>
         <div style="display:flex; align-items:center; gap:20px;">
             <div style="position:relative; width:160px; height:160px; flex-shrink:0;">
-                <canvas id="complianceChart" width="160" height="160"></canvas>
+                <canvas id="complianceChart" width="160" height="160"
+                    data-compliant="{{ percent_compliant }}"
+                    data-partial="{{ partial_percent }}"
+                    data-noncompliant="{{ non_compliant_percent }}">
+                </canvas>
                 <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;">
                     <div style="font-size:20px; font-weight:700; color:#1a1f36;">{{ percent_compliant }}%</div>
                     <div style="font-size:10px; color:#8892b0;">Overall Compliance</div>
@@ -155,7 +159,12 @@
         <h3 style="font-size:14px; font-weight:700; color:#1a1f36; margin-bottom:16px;">Issues by Severity</h3>
         <div style="display:flex; align-items:center; gap:20px;">
             <div style="position:relative; width:160px; height:160px; flex-shrink:0;">
-                <canvas id="severityChart" width="160" height="160"></canvas>
+                <canvas id="severityChart" width="160" height="160"
+                    data-critical="{{ critical_issues }}"
+                    data-serious="{{ serious_issues }}"
+                    data-moderate="{{ moderate_issues }}"
+                    data-minor="{{ minor_issues }}">
+                </canvas>
             </div>
             <div style="flex:1;">
                 <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:13px;">
@@ -322,12 +331,17 @@ document.getElementById("scanForm").addEventListener("submit", function() {
     }, 2500);
 });
 
-var compCtx = document.getElementById('complianceChart').getContext('2d');
+var compCanvas = document.getElementById('complianceChart');
+var compCtx = compCanvas.getContext('2d');
 new Chart(compCtx, {
     type: 'doughnut',
     data: {
         datasets: [{
-            data: [{{ percent_compliant }}, {{ partial_percent }}, {{ non_compliant_percent }}],
+            data: [
+                parseFloat(compCanvas.dataset.compliant),
+                parseFloat(compCanvas.dataset.partial),
+                parseFloat(compCanvas.dataset.noncompliant)
+            ],
             backgroundColor: ['#4caf50', '#f59e0b', '#ef4444'],
             borderWidth: 0,
             cutout: '72%'
@@ -336,12 +350,18 @@ new Chart(compCtx, {
     options: { plugins: { legend: { display: false } }, animation: { animateRotate: true } }
 });
 
-var sevCtx = document.getElementById('severityChart').getContext('2d');
+var sevCanvas = document.getElementById('severityChart');
+var sevCtx = sevCanvas.getContext('2d');
 new Chart(sevCtx, {
     type: 'doughnut',
     data: {
         datasets: [{
-            data: [{{ critical_issues }}, {{ serious_issues }}, {{ moderate_issues }}, {{ minor_issues }}],
+            data: [
+                parseFloat(sevCanvas.dataset.critical),
+                parseFloat(sevCanvas.dataset.serious),
+                parseFloat(sevCanvas.dataset.moderate),
+                parseFloat(sevCanvas.dataset.minor)
+            ],
             backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6', '#10b981'],
             borderWidth: 0,
             cutout: '72%'
