@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block nav_scans %}active{% endblock %}
+{% block page_title %}Scans{% endblock %}
+
+{% block content %}
+
+<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px;">
+    <div class="card" style="display:flex; align-items:center; gap:14px;">
+        <div style="width:44px; height:44px; background:#ede9fe; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px;">🔍</div>
+        <div>
+            <div style="font-size:12px; color:#8892b0; font-weight:600;">Total Scans</div>
+            <div style="font-size:26px; font-weight:700; color:#1a1f36;">{{ total_scans }}</div>
+        </div>
+    </div>
+    <div class="card" style="display:flex; align-items:center; gap:14px;">
+        <div style="width:44px; height:44px; background:#d1fae5; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px;">✅</div>
+        <div>
+            <div style="font-size:12px; color:#8892b0; font-weight:600;">Completed</div>
+            <div style="font-size:26px; font-weight:700; color:#1a1f36;">{{ completed }}</div>
+        </div>
+    </div>
+    <div class="card" style="display:flex; align-items:center; gap:14px;">
+        <div style="width:44px; height:44px; background:#fef3c7; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px;">⏳</div>
+        <div>
+            <div style="font-size:12px; color:#8892b0; font-weight:600;">Pending</div>
+            <div style="font-size:26px; font-weight:700; color:#1a1f36;">{{ pending }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h3 style="font-size:15px; font-weight:700; color:#1a1f36;">All Scans</h3>
+        <a href="/" class="btn-primary">+ New Scan</a>
+    </div>
+
+    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead>
+            <tr style="border-bottom:2px solid #f0f2f5;">
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">#</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Domain</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">WCAG Level</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Pages</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Status</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Date</th>
+                <th style="padding:10px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for scan in scans %}
+            <tr style="border-bottom:1px solid #f0f2f5;">
+                <td style="padding:10px; color:#8892b0;">{{ forloop.counter }}</td>
+                <td style="padding:10px; font-weight:600; color:#1a1f36;">{{ scan.domain|truncatechars:35 }}</td>
+                <td style="padding:10px;">
+                    <span style="background:#ede9fe; color:#6c63ff; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600;">{{ scan.wcag_level }} Level</span>
+                </td>
+                <td style="padding:10px; color:#4a5568;">{{ scan.page_set.count }}</td>
+                <td style="padding:10px;">
+                    {% if scan.status == "crawled" %}
+                        <span class="status-completed">Completed</span>
+                    {% elif scan.status == "pending" %}
+                        <span class="status-pending">Pending</span>
+                    {% else %}
+                        <span style="color:#8892b0;">{{ scan.status }}</span>
+                    {% endif %}
+                </td>
+                <td style="padding:10px; color:#8892b0;">{{ scan.created_at|date:"M d, Y g:i A" }}</td>
+                <td style="padding:10px;">
+                    <a href="/dashboard/{{ scan.id }}/" class="btn-outline" style="padding:4px 12px; font-size:12px;">View</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" style="padding:30px; text-align:center; color:#8892b0;">No scans yet. <a href="/" style="color:#6c63ff;">Start a scan</a></td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

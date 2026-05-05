@@ -13,7 +13,7 @@ class Project(models.Model):
 
 class Page(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    url = models.URLField()
+    url = models.URLField(max_length=2000)
     html_snapshot = models.TextField()
     status = models.CharField(max_length=20, default="pending")
 

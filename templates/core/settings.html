@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block nav_settings %}active{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+
+    <div class="card">
+        <h3 style="font-size:15px; font-weight:700; color:#1a1f36; margin-bottom:20px;">Default Scan Settings</h3>
+
+        <div style="margin-bottom:16px;">
+            <label style="font-size:13px; font-weight:600; color:#4a5568; display:block; margin-bottom:6px;">Default WCAG Level</label>
+            <select style="width:100%; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; font-size:14px; color:#1a1f36; outline:none; background:white;">
+                <option value="A">A - Basic</option>
+                <option value="AA" selected>AA - Standard (Recommended)</option>
+                <option value="AAA">AAA - Enhanced</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom:16px;">
+            <label style="font-size:13px; font-weight:600; color:#4a5568; display:block; margin-bottom:6px;">Default Crawl Depth</label>
+            <select style="width:100%; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; font-size:14px; color:#1a1f36; outline:none; background:white;">
+                <option value="5">1 Level</option>
+                <option value="10" selected>3 Levels</option>
+                <option value="25">5 Levels</option>
+                <option value="50">10 Levels</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom:16px;">
+            <label style="font-size:13px; font-weight:600; color:#4a5568; display:block; margin-bottom:6px;">Max Pages Per Scan</label>
+            <input type="number" value="50" style="width:100%; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; font-size:14px; color:#1a1f36; outline:none;">
+        </div>
+
+        <button class="btn-primary">Save Settings</button>
+    </div>
+
+    <div class="card">
+        <h3 style="font-size:15px; font-weight:700; color:#1a1f36; margin-bottom:20px;">About</h3>
+
+        <div style="margin-bottom:14px;">
+            <div style="font-size:12px; color:#8892b0; font-weight:600; margin-bottom:4px;">Application</div>
+            <div style="font-size:14px; color:#1a1f36; font-weight:600;">WCAG Auditor</div>
+        </div>
+
+        <div style="margin-bottom:14px;">
+            <div style="font-size:12px; color:#8892b0; font-weight:600; margin-bottom:4px;">Version</div>
+            <div style="font-size:14px; color:#1a1f36;">1.0.0</div>
+        </div>
+
+        <div style="margin-bottom:14px;">
+            <div style="font-size:12px; color:#8892b0; font-weight:600; margin-bottom:4px;">Framework</div>
+            <div style="font-size:14px; color:#1a1f36;">Django 6.0.4</div>
+        </div>
+
+        <div style="margin-bottom:14px;">
+            <div style="font-size:12px; color:#8892b0; font-weight:600; margin-bottom:4px;">WCAG Standards Supported</div>
+            <div style="display:flex; gap:8px; margin-top:6px;">
+                <span style="background:#d1fae5; color:#38a169; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600;">A</span>
+                <span style="background:#ede9fe; color:#6c63ff; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600;">AA</span>
+                <span style="background:#fee2e2; color:#e53e3e; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600;">AAA</span>
+            </div>
+        </div>
+
+        <div>
+            <div style="font-size:12px; color:#8892b0; font-weight:600; margin-bottom:4px;">Rules Loaded</div>
+            <div style="font-size:14px; color:#1a1f36;">18 WCAG Rules</div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

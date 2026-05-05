@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block nav_pages %}active{% endblock %}
+{% block page_title %}Pages{% endblock %}
+
+{% block content %}
+
+<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px;">
+    <div class="card" style="display:flex; align-items:center; gap:14px;">
+        <div style="width:44px; height:44px; background:#ede9fe; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px;">📄</div>
+        <div>
+            <div style="font-size:12px; color:#8892b0; font-weight:600;">Total Pages</div>
+            <div style="font-size:26px; font-weight:700; color:#1a1f36;">{{ total }}</div>
+        </div>
+    </div>
+    <div class="card" style="display:flex; align-items:center; gap:14px;">
+        <div style="width:44px; height:44px; background:#d1fae5; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px;">✅</div>
+        <div>
+            <div style="font-size:12px; color:#8892b0; font-weight:600;">Passed</div>
+            <div style="font-size:26px; font-weight:700; color:#1a1f36;">{{ passed }}</div>
+        </div>
+    </div>
+    <div class="card" style="display:flex; align-items:center; gap:14px;">
+        <div style="width:44px; height:44px; background:#fee2e2; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px;">❌</div>
+        <div>
+            <div style="font-size:12px; color:#8892b0; font-weight:600;">Failed</div>
+            <div style="font-size:26px; font-weight:700; color:#1a1f36;">{{ failed }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="font-size:15px; font-weight:700; color:#1a1f36; margin-bottom:20px;">All Pages</h3>
+
+    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead>
+            <tr style="border-bottom:2px solid #f0f2f5;">
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">#</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">URL</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Project</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Status</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Issues</th>
+                <th style="padding:10px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for page in pages %}
+            <tr style="border-bottom:1px solid #f0f2f5;">
+                <td style="padding:10px; color:#8892b0;">{{ forloop.counter }}</td>
+                <td style="padding:10px; color:#6c63ff; font-size:12px;">{{ page.url|truncatechars:45 }}</td>
+                <td style="padding:10px; color:#4a5568; font-size:12px;">{{ page.project.domain|truncatechars:25 }}</td>
+                <td style="padding:10px;">
+                    {% if page.status == "pass" %}
+                        <span style="background:#d1fae5; color:#38a169; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600;">Pass</span>
+                    {% elif page.status == "fail" %}
+                        <span style="background:#fee2e2; color:#e53e3e; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600;">Fail</span>
+                    {% else %}
+                        <span style="background:#fef3c7; color:#d69e2e; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600;">{{ page.status|capfirst }}</span>
+                    {% endif %}
+                </td>
+                <td style="padding:10px; color:#4a5568;">{{ page.issue_set.count }}</td>
+                <td style="padding:10px;">
+                    <a href="/reporting/page/{{ page.id }}/" class="btn-outline" style="padding:4px 12px; font-size:12px;">View Report</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" style="padding:30px; text-align:center; color:#8892b0;">No pages crawled yet. <a href="/" style="color:#6c63ff;">Start a scan</a></td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

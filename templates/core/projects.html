@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block nav_projects %}active{% endblock %}
+{% block page_title %}Projects{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h3 style="font-size:15px; font-weight:700; color:#1a1f36;">All Projects</h3>
+        <a href="/" class="btn-primary">+ New Scan</a>
+    </div>
+
+    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead>
+            <tr style="border-bottom:2px solid #f0f2f5;">
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">#</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Domain</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">WCAG Level</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Status</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Created</th>
+                <th style="padding:10px;"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for project in projects %}
+            <tr style="border-bottom:1px solid #f0f2f5;">
+                <td style="padding:10px; color:#8892b0;">{{ forloop.counter }}</td>
+                <td style="padding:10px; font-weight:600; color:#1a1f36;">{{ project.domain|truncatechars:40 }}</td>
+                <td style="padding:10px;">
+                    <span style="background:#ede9fe; color:#6c63ff; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600;">{{ project.wcag_level }}</span>
+                </td>
+                <td style="padding:10px;">
+                    <span class="status-{% if project.status == 'crawled' %}completed{% else %}{{ project.status }}{% endif %}">
+                        {% if project.status == "crawled" %}Completed{% else %}{{ project.status|capfirst }}{% endif %}
+                    </span>
+                </td>
+                <td style="padding:10px; color:#8892b0;">{{ project.created_at|date:"M d, Y" }}</td>
+                <td style="padding:10px;">
+                    <a href="/dashboard/{{ project.id }}/" class="btn-outline" style="padding:4px 12px; font-size:12px;">View Dashboard</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" style="padding:30px; text-align:center; color:#8892b0;">No projects yet. <a href="/" style="color:#6c63ff;">Start a scan</a></td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

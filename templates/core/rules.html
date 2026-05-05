@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block nav_rules %}active{% endblock %}
+{% block page_title %}Rules{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h3 style="font-size:15px; font-weight:700; color:#1a1f36; margin-bottom:20px;">WCAG Rules ({{ rules.count }} total)</h3>
+
+    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead>
+            <tr style="border-bottom:2px solid #f0f2f5;">
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">ID</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Title</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Level</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Category</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Check Type</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Fix Suggestion</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rule in rules %}
+            <tr style="border-bottom:1px solid #f0f2f5;">
+                <td style="padding:10px; font-weight:700; color:#6c63ff;">{{ rule.wcag_id }}</td>
+                <td style="padding:10px; font-weight:600; color:#1a1f36;">{{ rule.title }}</td>
+                <td style="padding:10px;">
+                    <span style="background:#ede9fe; color:#6c63ff; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600;">{{ rule.level }}</span>
+                </td>
+                <td style="padding:10px; color:#4a5568;">{{ rule.category }}</td>
+                <td style="padding:10px; color:#8892b0;">{{ rule.check_type }}</td>
+                <td style="padding:10px; color:#4a5568; font-size:12px;">{{ rule.fix_suggestion|truncatechars:60 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

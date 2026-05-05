@@ -2,60 +2,77 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 from core.models import Page, Project
+from analyzer.analyzer import run_analyzer
 
 
 def normalize_url(base_url, link):
-    return urljoin(base_url, link)
+    full_url = urljoin(base_url, link)
+    return full_url
 
 
 def is_valid_url(url, domain):
-    return urlparse(url).netloc == domain
+    parsed = urlparse(url)
+    return parsed.netloc == domain
 
 
-def crawl(start_url, max_pages=10):
-    visited_urls = set()
-    domain = urlparse(start_url).netloc
+def crawl(start_url, project_id=None, max_pages=10, domain_only=True):
+
+    visited = set()
     queue = [start_url]
+    domain = urlparse(start_url).netloc
 
-    project, _ = Project.objects.get_or_create(
-        domain=start_url,
-        defaults={'wcag_level': 'A', 'status': 'pending'}
-    )
+    if project_id:
+        proj = Project.objects.get(id=project_id)
+    else:
+        proj, created = Project.objects.get_or_create(
+            domain=start_url,
+            defaults={"wcag_level": "A", "status": "pending"}
+        )
 
-    while queue and len(visited_urls) < max_pages:
+    while queue and len(visited) < max_pages:
         url = queue.pop(0)
 
-        if url in visited_urls:
+        if url in visited:
             continue
 
-        print(f"Crawling: {url}")
-        visited_urls.add(url)
+        visited.add(url)
+        print("crawling now: " + url)
 
         try:
-            response = requests.get(url, timeout=5)
+            resp = requests.get(url, timeout=5)
+            html = resp.text
 
-            page = Page.objects.filter(project=project, url=url).first()
-            if page:
-                page.html_snapshot = response.text
-                page.status = "done"
-                page.save()
+            existing_page = Page.objects.filter(project=proj, url=url).first()
+
+            if existing_page:
+                existing_page.html_snapshot = html
+                existing_page.status = "pending"
+                existing_page.save()
+                pg = existing_page
             else:
-                Page.objects.create(
-                    project=project,
+                pg = Page.objects.create(
+                    project=proj,
                     url=url,
-                    html_snapshot=response.text,
-                    status="done"
+                    html_snapshot=html,
+                    status="pending"
                 )
 
-            soup = BeautifulSoup(response.text, 'html.parser')
+            run_analyzer(pg)
 
-            for a_tag in soup.find_all('a', href=True):
-                link = normalize_url(url, a_tag['href'])
-                if link not in visited_urls and is_valid_url(link, domain):
-                    queue.append(link)
+            soup = BeautifulSoup(html, "html.parser")
+            all_links = soup.find_all("a", href=True)
+
+            for a in all_links:
+                new_link = normalize_url(url, a["href"])
+                if new_link in visited:
+                    continue
+                if domain_only and not is_valid_url(new_link, domain):
+                    continue
+                queue.append(new_link)
 
         except Exception as e:
-            print(f"Error crawling {url}: {e}")
+            print("error on page " + url + " : " + str(e))
 
-    project.status = "crawled"
-    project.save()
+    proj.status = "crawled"
+    proj.save()
+    print("done crawling!")

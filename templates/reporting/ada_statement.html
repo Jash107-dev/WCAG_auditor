@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block page_title %}ADA Compliance Statement{% endblock %}
+
+{% block content %}
+
+<div class="card" style="margin-bottom:20px;">
+    <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px;">
+        <span style="font-size:40px;">⚖️</span>
+        <div>
+            <h2 style="font-size:18px; font-weight:700; color:#1a1f36; margin-bottom:4px;">ADA Compliance Statement</h2>
+            <p style="font-size:13px; color:#8892b0;">{{ project.domain }} · WCAG {{ project.wcag_level }} Level</p>
+        </div>
+    </div>
+
+    {% if is_compliant %}
+    <div style="background:#d1fae5; border-left:4px solid #38a169; padding:16px 20px; border-radius:8px; margin-bottom:20px;">
+        <p style="font-size:15px; font-weight:700; color:#38a169; margin-bottom:6px;">✅ COMPLIANT</p>
+        <p style="font-size:14px; color:#276749; line-height:1.6;">
+            This site aligns with ADA accessibility expectations based on WCAG <strong>{{ project.wcag_level }}</strong> checks.
+            The website has been evaluated and meets the required accessibility standards.
+        </p>
+    </div>
+    {% else %}
+    <div style="background:#fef3c7; border-left:4px solid #d69e2e; padding:16px 20px; border-radius:8px; margin-bottom:20px;">
+        <p style="font-size:15px; font-weight:700; color:#d69e2e; margin-bottom:6px;">⚠️ PARTIALLY COMPLIANT</p>
+        <p style="font-size:14px; color:#744210; line-height:1.6;">
+            This site is <strong>PARTIALLY</strong> aligned with ADA accessibility expectations based on WCAG <strong>{{ project.wcag_level }}</strong> checks.
+            Accessibility issues were found that need to be addressed to achieve full compliance.
+        </p>
+    </div>
+    {% endif %}
+
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px;">
+        <div style="background:#f8f9fa; border-radius:8px; padding:16px; text-align:center;">
+            <div style="font-size:28px; font-weight:700; color:#1a1f36;">{{ total_pages }}</div>
+            <div style="font-size:12px; color:#8892b0; margin-top:4px;">Pages Evaluated</div>
+        </div>
+        <div style="background:#f8f9fa; border-radius:8px; padding:16px; text-align:center;">
+            <div style="font-size:28px; font-weight:700; color:#38a169;">{{ compliant_pages }}</div>
+            <div style="font-size:12px; color:#8892b0; margin-top:4px;">Compliant Pages</div>
+        </div>
+        <div style="background:#f8f9fa; border-radius:8px; padding:16px; text-align:center;">
+            <div style="font-size:28px; font-weight:700; color:#6c63ff;">{{ percent_compliant }}%</div>
+            <div style="font-size:12px; color:#8892b0; margin-top:4px;">Compliance Rate</div>
+        </div>
+        <div style="background:#f8f9fa; border-radius:8px; padding:16px; text-align:center;">
+            <div style="font-size:28px; font-weight:700; color:#e53e3e;">{{ total_issues }}</div>
+            <div style="font-size:12px; color:#8892b0; margin-top:4px;">Issues Found</div>
+        </div>
+    </div>
+
+    <div style="background:#f0f4ff; border-radius:8px; padding:20px; margin-bottom:24px;">
+        <h3 style="font-size:14px; font-weight:700; color:#1a1f36; margin-bottom:12px;">Statement of Conformance</h3>
+        <p style="font-size:13px; color:#4a5568; line-height:1.8;">
+            <strong>{{ project.domain }}</strong> has been evaluated for web accessibility conformance
+            against the Web Content Accessibility Guidelines (WCAG) {{ project.wcag_level }} standard.
+            This evaluation was conducted using automated accessibility checks covering
+            perceivable, operable, understandable, and robust criteria.
+        </p>
+        <p style="font-size:13px; color:#4a5568; line-height:1.8; margin-top:10px;">
+            <strong>Evaluation Date:</strong> {{ project.created_at|date:"F d, Y" }}<br>
+            <strong>Standard Applied:</strong> WCAG {{ project.wcag_level }}<br>
+            <strong>Evaluation Tool:</strong> WCAG Auditor v1.0<br>
+            <strong>Pages Evaluated:</strong> {{ total_pages }}
+        </p>
+    </div>
+
+    <div style="display:flex; gap:12px;">
+        <a href="/reporting/export/pdf/{{ project.id }}/" class="btn-primary">⬇ Download PDF Report</a>
+        <a href="/dashboard/{{ project.id }}/" class="btn-outline">← Back to Dashboard</a>
+    </div>
+</div>
+
+{% endblock %}

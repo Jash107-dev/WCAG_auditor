@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WCAG Auditor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 220px;
+            background: #1a1f36;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+        }
+
+        .sidebar-logo {
+            padding: 20px 16px;
+            border-bottom: 1px solid #2d3561;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-logo .logo-icon {
+            width: 38px;
+            height: 38px;
+            background: #6c63ff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .sidebar-logo .logo-text h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .sidebar-logo .logo-text p {
+            font-size: 10px;
+            color: #8892b0;
+        }
+
+        .sidebar-nav {
+            padding: 20px 0;
+            flex: 1;
+        }
+
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 20px;
+            color: #8892b0;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .sidebar-nav a:hover, .sidebar-nav a.active {
+            background: #6c63ff;
+            color: white;
+            border-radius: 6px;
+            margin: 0 10px;
+            padding: 11px 10px;
+        }
+
+        .sidebar-nav a .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+        .wcag-guide {
+            margin: 10px;
+            background: #252b4a;
+            border-radius: 8px;
+            padding: 14px;
+        }
+
+        .wcag-guide p { font-size: 11px; color: #8892b0; margin-bottom: 10px; font-weight: 600; }
+
+        .wcag-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: #ccd6f6;
+        }
+
+        .wcag-badge .badge-circle {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .badge-a { background: #4caf50; }
+        .badge-aa { background: #6c63ff; }
+        .badge-aaa { background: #ff6b6b; }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid #2d3561;
+        }
+
+        .sidebar-footer a { color: #6c63ff; font-size: 12px; text-decoration: none; }
+        .sidebar-footer p { color: #8892b0; font-size: 11px; margin-top: 4px; }
+
+        .main-content {
+            margin-left: 220px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .topbar {
+            background: white;
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #e8ecf0;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .topbar h2 { font-size: 20px; color: #1a1f36; font-weight: 700; }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .topbar-right .icon-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid #e8ecf0;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            background: #6c63ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .user-info .user-name { font-size: 13px; font-weight: 600; color: #1a1f36; }
+        .user-info .user-email { font-size: 11px; color: #8892b0; }
+
+        .page-body { padding: 24px 28px; }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+
+        .btn-primary {
+            background: #6c63ff;
+            color: white;
+            border: none;
+            padding: 10px 22px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+
+        .btn-primary:hover { background: #5a52d5; }
+
+        .btn-outline {
+            background: white;
+            color: #6c63ff;
+            border: 1px solid #6c63ff;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .severity-critical { background: #fff0f0; color: #e53e3e; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .severity-serious { background: #fff4e6; color: #dd6b20; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .severity-moderate { background: #fffbeb; color: #d69e2e; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .severity-minor { background: #f0fff4; color: #38a169; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+
+        .status-completed { color: #38a169; font-size: 12px; font-weight: 600; }
+        .status-failed { color: #e53e3e; font-size: 12px; font-weight: 600; }
+        .status-pending { color: #d69e2e; font-size: 12px; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-icon">✓</div>
+        <div class="logo-text">
+            <h3>WCAG Auditor</h3>
+            <p>Web Accessibility Checker</p>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        <a href="/" class="{% block nav_home %}{% endblock %}">
+            <span class="nav-icon">🏠</span> Dashboard
+        </a>
+        <a href="/projects/" class="{% block nav_projects %}{% endblock %}">
+            <span class="nav-icon">📁</span> Projects
+        </a>
+        <a href="/scans/" class="{% block nav_scans %}{% endblock %}">
+            <span class="nav-icon">🔍</span> Scans
+        </a>
+        <a href="/pages/" class="{% block nav_pages %}{% endblock %}">
+            <span class="nav-icon">📄</span> Pages
+        </a>
+        <a href="/issues/" class="{% block nav_issues %}{% endblock %}">
+            <span class="nav-icon">⚠️</span> Issues
+        </a>
+        <a href="/rules/" class="{% block nav_rules %}{% endblock %}">
+            <span class="nav-icon">📋</span> Rules
+        </a>
+        <a href="/reports/" class="{% block nav_reports %}{% endblock %}">
+            <span class="nav-icon">📊</span> Reports
+        </a>
+        <a href="/settings/" class="{% block nav_settings %}{% endblock %}">
+            <span class="nav-icon">⚙️</span> Settings
+        </a>
+    </nav>
+
+    <div class="wcag-guide">
+        <p>WCAG Level Guide</p>
+        <div class="wcag-badge">
+            <div class="badge-circle badge-a">A</div>
+            <span>Basic accessibility</span>
+        </div>
+        <div class="wcag-badge">
+            <div class="badge-circle badge-aa">AA</div>
+            <span>Standard level (Most organizations)</span>
+        </div>
+        <div class="wcag-badge">
+            <div class="badge-circle badge-aaa">AAA</div>
+            <span>Highest compliance</span>
+        </div>
+    </div>
+
+    <div class="sidebar-footer">
+        <p>Need Help?</p>
+        <a href="#">View Documentation</a>
+        <p style="margin-top:10px;">© 2025 WCAG Auditor</p>
+    </div>
+</div>
+
+<div class="main-content">
+    <div class="topbar">
+        <h2>{% block page_title %}Dashboard{% endblock %}</h2>
+        <div class="topbar-right">
+            <div class="icon-btn">🌙</div>
+            <div class="icon-btn">🔔</div>
+            <div class="user-info">
+                <div class="user-avatar">A</div>
+                <div>
+                    <div class="user-name">Admin</div>
+                    <div class="user-email">admin@example.com</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-body">
+        {% block content %}{% endblock %}
+    </div>
+</div>
+
+</body>
+</html>
