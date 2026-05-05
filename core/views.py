@@ -2,8 +2,7 @@ from django.shortcuts import render, redirect
 from django.db.models import Count
 from django.http import JsonResponse
 from core.models import Project, Page, Issue, Rule
-from crawler.crawler import crawl
-import threading
+from crawler.tasks import crawl_website_task
 
 def home(request):
     if request.method == "POST":
@@ -15,9 +14,7 @@ def home(request):
         domain_only = domain_only_value == "true"
         print(f"DEBUG: domain_only raw value = {domain_only_value}")
         print(f"DEBUG: domain_only boolean = {domain_only}")
-        thread = threading.Thread(target=crawl, args=(url, new_project.id, int(depth), domain_only))
-        thread.daemon = True
-        thread.start()
+        crawl_website_task.delay(url, new_project.id, int(depth), domain_only)
         return redirect("dashboard", project_id=new_project.id)
     return render(request, "core/home.html")
 
