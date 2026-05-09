@@ -11,10 +11,17 @@ from core.models import Page, Issue, Project
 
 def page_report(request, page_id):
     pg = Page.objects.get(id=page_id)
-    pg_issues = Issue.objects.filter(page=pg).select_related("rule")
+    pg_issues = Issue.objects.filter(page=pg).select_related("rule").order_by(
+        # critical first, then by source (deterministic before llm)
+        "source", "severity"
+    )
+    deterministic_count = pg_issues.filter(source="deterministic").count()
+    llm_count = pg_issues.filter(source="llm").count()
     return render(request, "reporting/page_report.html", {
         "page": pg,
         "issues": pg_issues,
+        "deterministic_count": deterministic_count,
+        "llm_count": llm_count,
     })
 
 

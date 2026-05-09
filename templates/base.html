@@ -1,102 +1,140 @@
 <!DOCTYPE html>
-<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WCAG Auditor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: #f0f2f5;
+            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+            background: #f4f6fb;
             display: flex;
             min-height: 100vh;
+            color: #1a1f36;
         }
 
+        /* ── Sidebar ── */
         .sidebar {
-            width: 220px;
-            background: #1a1f36;
+            width: 230px;
+            background: linear-gradient(180deg, #13172b 0%, #1a1f36 100%);
             color: white;
             display: flex;
             flex-direction: column;
             position: fixed;
             height: 100vh;
             z-index: 100;
+            border-right: 1px solid rgba(255,255,255,0.04);
         }
 
         .sidebar-logo {
-            padding: 20px 16px;
-            border-bottom: 1px solid #2d3561;
+            padding: 22px 18px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
 
         .sidebar-logo .logo-icon {
-            width: 38px;
-            height: 38px;
-            background: #6c63ff;
-            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #6c63ff, #a78bfa);
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 18px;
+            box-shadow: 0 4px 12px rgba(108,99,255,0.4);
         }
 
         .sidebar-logo .logo-text h3 {
             font-size: 14px;
             font-weight: 700;
             color: white;
+            letter-spacing: 0.2px;
         }
 
         .sidebar-logo .logo-text p {
             font-size: 10px;
-            color: #8892b0;
+            color: #6b7a99;
+            margin-top: 1px;
         }
 
         .sidebar-nav {
-            padding: 20px 0;
+            padding: 16px 0;
             flex: 1;
+            overflow-y: auto;
+        }
+
+        .nav-section-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: #4a5568;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 12px 20px 6px;
         }
 
         .sidebar-nav a {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 11px 20px;
+            gap: 10px;
+            padding: 10px 18px;
             color: #8892b0;
             text-decoration: none;
-            font-size: 14px;
-            transition: all 0.2s;
+            font-size: 13.5px;
+            font-weight: 500;
+            transition: all 0.18s ease;
+            border-radius: 0;
+            margin: 1px 0;
         }
 
-        .sidebar-nav a:hover, .sidebar-nav a.active {
-            background: #6c63ff;
+        .sidebar-nav a:hover {
+            background: rgba(108,99,255,0.12);
+            color: #c4b5fd;
+            padding-left: 22px;
+        }
+
+        .sidebar-nav a.active {
+            background: linear-gradient(90deg, rgba(108,99,255,0.25), rgba(108,99,255,0.08));
             color: white;
-            border-radius: 6px;
-            margin: 0 10px;
-            padding: 11px 10px;
+            border-left: 3px solid #6c63ff;
+            padding-left: 15px;
         }
 
-        .sidebar-nav a .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+        .sidebar-nav a .nav-icon {
+            font-size: 15px;
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
 
         .wcag-guide {
-            margin: 10px;
-            background: #252b4a;
-            border-radius: 8px;
+            margin: 10px 12px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 10px;
             padding: 14px;
         }
 
-        .wcag-guide p { font-size: 11px; color: #8892b0; margin-bottom: 10px; font-weight: 600; }
+        .wcag-guide p {
+            font-size: 10px;
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
 
         .wcag-badge {
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-bottom: 8px;
+            margin-bottom: 7px;
             font-size: 12px;
             color: #ccd6f6;
         }
@@ -111,129 +149,181 @@
             font-size: 10px;
             font-weight: 700;
             color: white;
+            flex-shrink: 0;
         }
 
-        .badge-a { background: #4caf50; }
-        .badge-aa { background: #6c63ff; }
-        .badge-aaa { background: #ff6b6b; }
+        .badge-a   { background: linear-gradient(135deg,#38a169,#48bb78); }
+        .badge-aa  { background: linear-gradient(135deg,#6c63ff,#a78bfa); }
+        .badge-aaa { background: linear-gradient(135deg,#e53e3e,#fc8181); }
 
         .sidebar-footer {
-            padding: 16px;
-            border-top: 1px solid #2d3561;
+            padding: 14px 18px;
+            border-top: 1px solid rgba(255,255,255,0.06);
         }
 
         .sidebar-footer a { color: #6c63ff; font-size: 12px; text-decoration: none; }
-        .sidebar-footer p { color: #8892b0; font-size: 11px; margin-top: 4px; }
+        .sidebar-footer a:hover { color: #a78bfa; }
+        .sidebar-footer p { color: #4a5568; font-size: 11px; margin-top: 4px; }
 
+        /* ── Main content ── */
         .main-content {
-            margin-left: 220px;
+            margin-left: 230px;
             flex: 1;
             display: flex;
             flex-direction: column;
+            min-height: 100vh;
         }
 
         .topbar {
             background: white;
-            padding: 14px 28px;
+            padding: 13px 28px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid #e8ecf0;
+            border-bottom: 1px solid #eaecf4;
             position: sticky;
             top: 0;
             z-index: 50;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         }
 
-        .topbar h2 { font-size: 20px; color: #1a1f36; font-weight: 700; }
+        .topbar h2 {
+            font-size: 18px;
+            color: #1a1f36;
+            font-weight: 700;
+            letter-spacing: -0.2px;
+        }
 
         .topbar-right {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
         }
 
         .topbar-right .icon-btn {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border: 1px solid #e8ecf0;
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            border: 1px solid #eaecf4;
             background: white;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 15px;
+            transition: background 0.15s;
         }
+
+        .topbar-right .icon-btn:hover { background: #f4f6fb; }
 
         .user-info {
             display: flex;
             align-items: center;
             gap: 10px;
+            padding: 5px 10px;
+            border-radius: 8px;
+            border: 1px solid #eaecf4;
+            cursor: pointer;
+            transition: background 0.15s;
         }
 
+        .user-info:hover { background: #f4f6fb; }
+
         .user-avatar {
-            width: 36px;
-            height: 36px;
-            background: #6c63ff;
-            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #6c63ff, #a78bfa);
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-weight: 700;
-            font-size: 14px;
+            font-size: 13px;
         }
 
-        .user-info .user-name { font-size: 13px; font-weight: 600; color: #1a1f36; }
+        .user-info .user-name  { font-size: 13px; font-weight: 600; color: #1a1f36; }
         .user-info .user-email { font-size: 11px; color: #8892b0; }
 
         .page-body { padding: 24px 28px; }
 
+        /* ── Cards ── */
         .card {
             background: white;
-            border-radius: 12px;
+            border-radius: 14px;
             padding: 20px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 8px rgba(0,0,0,0.03);
+            border: 1px solid #f0f2f8;
+            transition: box-shadow 0.2s;
         }
 
+        .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+
+        /* ── Buttons ── */
         .btn-primary {
-            background: #6c63ff;
+            background: linear-gradient(135deg, #6c63ff, #7c73ff);
             color: white;
             border: none;
             padding: 10px 22px;
-            border-radius: 8px;
-            font-size: 14px;
+            border-radius: 9px;
+            font-size: 13.5px;
             font-weight: 600;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
             gap: 6px;
             text-decoration: none;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(108,99,255,0.3);
+            letter-spacing: 0.1px;
         }
 
-        .btn-primary:hover { background: #5a52d5; }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a52d5, #6c63ff);
+            box-shadow: 0 4px 14px rgba(108,99,255,0.4);
+            transform: translateY(-1px);
+        }
 
         .btn-outline {
             background: white;
             color: #6c63ff;
-            border: 1px solid #6c63ff;
+            border: 1.5px solid #e0dcff;
             padding: 8px 18px;
-            border-radius: 8px;
+            border-radius: 9px;
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
             text-decoration: none;
             display: inline-block;
+            transition: all 0.2s;
         }
 
-        .severity-critical { background: #fff0f0; color: #e53e3e; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-        .severity-serious { background: #fff4e6; color: #dd6b20; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-        .severity-moderate { background: #fffbeb; color: #d69e2e; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-        .severity-minor { background: #f0fff4; color: #38a169; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .btn-outline:hover {
+            background: #f5f3ff;
+            border-color: #6c63ff;
+            transform: translateY(-1px);
+        }
 
-        .status-completed { color: #38a169; font-size: 12px; font-weight: 600; }
-        .status-failed { color: #e53e3e; font-size: 12px; font-weight: 600; }
-        .status-pending { color: #d69e2e; font-size: 12px; font-weight: 600; }
+        /* ── Severity badges ── */
+        .severity-critical { background: #fff0f0; color: #e53e3e; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid #fecaca; }
+        .severity-serious  { background: #fff4e6; color: #dd6b20; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid #fed7aa; }
+        .severity-moderate { background: #fffbeb; color: #b7791f; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid #fde68a; }
+        .severity-minor    { background: #f0fff4; color: #276749; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid #9ae6b4; }
+
+        /* ── Status ── */
+        .status-completed { color: #276749; font-size: 12px; font-weight: 600; background:#f0fff4; padding:2px 8px; border-radius:20px; }
+        .status-failed    { color: #c53030; font-size: 12px; font-weight: 600; background:#fff5f5; padding:2px 8px; border-radius:20px; }
+        .status-pending   { color: #b7791f; font-size: 12px; font-weight: 600; background:#fffbeb; padding:2px 8px; border-radius:20px; }
+
+        /* ── Table rows hover ── */
+        tbody tr { transition: background 0.12s; }
+        tbody tr:hover { background: #fafbff; }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
     </style>
 </head>
 <body>
@@ -243,11 +333,12 @@
         <div class="logo-icon">✓</div>
         <div class="logo-text">
             <h3>WCAG Auditor</h3>
-            <p>Web Accessibility Checker</p>
+            <p>Accessibility Intelligence</p>
         </div>
     </div>
 
     <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
         <a href="/" class="{% block nav_home %}{% endblock %}">
             <span class="nav-icon">🏠</span> Dashboard
         </a>
@@ -257,6 +348,8 @@
         <a href="/scans/" class="{% block nav_scans %}{% endblock %}">
             <span class="nav-icon">🔍</span> Scans
         </a>
+
+        <div class="nav-section-label">Analysis</div>
         <a href="/pages/" class="{% block nav_pages %}{% endblock %}">
             <span class="nav-icon">📄</span> Pages
         </a>
@@ -266,6 +359,8 @@
         <a href="/rules/" class="{% block nav_rules %}{% endblock %}">
             <span class="nav-icon">📋</span> Rules
         </a>
+
+        <div class="nav-section-label">Output</div>
         <a href="/reports/" class="{% block nav_reports %}{% endblock %}">
             <span class="nav-icon">📊</span> Reports
         </a>
@@ -282,7 +377,7 @@
         </div>
         <div class="wcag-badge">
             <div class="badge-circle badge-aa">AA</div>
-            <span>Standard level (Most organizations)</span>
+            <span>Standard (recommended)</span>
         </div>
         <div class="wcag-badge">
             <div class="badge-circle badge-aaa">AAA</div>
@@ -291,9 +386,8 @@
     </div>
 
     <div class="sidebar-footer">
-        <p>Need Help?</p>
-        <a href="#">View Documentation</a>
-        <p style="margin-top:10px;">© 2025 WCAG Auditor</p>
+        <a href="/settings/">⚙ Settings</a>
+        <p style="margin-top:8px;">© 2025 WCAG Auditor</p>
     </div>
 </div>
 
@@ -301,13 +395,13 @@
     <div class="topbar">
         <h2>{% block page_title %}Dashboard{% endblock %}</h2>
         <div class="topbar-right">
-            <div class="icon-btn">🌙</div>
-            <div class="icon-btn">🔔</div>
+            <div class="icon-btn" title="Toggle theme">🌙</div>
+            <div class="icon-btn" title="Notifications">🔔</div>
             <div class="user-info">
                 <div class="user-avatar">A</div>
                 <div>
                     <div class="user-name">Admin</div>
-                    <div class="user-email">admin@example.com</div>
+                    <div class="user-email">admin@wcag.io</div>
                 </div>
             </div>
         </div>

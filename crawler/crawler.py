@@ -2,7 +2,16 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 from core.models import Page, Project
-from analyzer.analyzer import run_analyzer
+from analyzer.engine import analyze_page
+
+# Scan scope constants
+SCOPE_SINGLE   = "single"    # Only the entered URL
+SCOPE_MAIN     = "main"      # Homepage + top-level nav links only
+SCOPE_FULL     = "full"      # All internal pages (no limit)
+
+# Hard cap to prevent runaway crawls on huge sites (can be raised)
+MAX_PAGES_HARD_CAP = 500
+
 
 def normalize_url(base_url, link):
     full_url = urljoin(base_url, link)
@@ -12,74 +21,179 @@ def normalize_url(base_url, link):
         full_url = full_url.rstrip('/')
     return full_url
 
-def is_valid_url(url, domain):
-    parsed = urlparse(url)
-    url_domain = parsed.netloc
-    domain_normalized = domain.replace('www.', '')
-    url_domain_normalized = url_domain.replace('www.', '')
-    return url_domain_normalized == domain_normalized
 
-def crawl(start_url, project_id=None, max_pages=10, domain_only=True):
-    visited = set()
-    queue = [start_url]
-    queued = set([start_url])
+def is_internal_url(url, domain):
+    """Check if a URL belongs to the same domain."""
+    parsed = urlparse(url)
+    url_domain = parsed.netloc.replace('www.', '')
+    base_domain = domain.replace('www.', '')
+    return url_domain == base_domain
+
+
+def is_navigational_link(href):
+    """Skip non-page links."""
+    skip_prefixes = ('#', 'javascript:', 'mailto:', 'tel:', 'ftp:', 'data:')
+    return not any(href.startswith(p) for p in skip_prefixes)
+
+
+def get_main_links(start_url, html, domain):
+    """
+    Extract top-level navigation links from the homepage.
+    Used for SCOPE_MAIN — grabs links from nav, header, and top-level <a> tags.
+    """
+    soup = BeautifulSoup(html, 'html.parser')
+    links = set()
+
+    # Priority: nav elements, header links
+    for container in soup.find_all(['nav', 'header']):
+        for a in container.find_all('a', href=True):
+            href = a['href'].strip()
+            if not href or not is_navigational_link(href):
+                continue
+            normalized = normalize_url(start_url, href)
+            if is_internal_url(normalized, domain):
+                links.add(normalized)
+
+    # If nav found nothing, fall back to all top-level links
+    if not links:
+        for a in soup.find_all('a', href=True):
+            href = a['href'].strip()
+            if not href or not is_navigational_link(href):
+                continue
+            normalized = normalize_url(start_url, href)
+            if is_internal_url(normalized, domain):
+                links.add(normalized)
+
+    return list(links)
+
+
+def crawl(start_url, project_id=None, scope=SCOPE_FULL, use_llm=False):
+    """
+    Crawl a website based on scope:
+      - single : only the given URL
+      - main   : homepage + top-level nav links
+      - full   : all internal pages (up to MAX_PAGES_HARD_CAP)
+    """
+    # Auto-prepend https:// if missing
+    if not start_url.startswith(('http://', 'https://')):
+        start_url = 'https://' + start_url
+
     domain = urlparse(start_url).netloc
-    print(f"Starting crawl for domain: {domain}")
-    print(f"Domain only mode: {domain_only}")
-    print(f"Max pages: {max_pages}")
+    print(f"Starting crawl | domain={domain} | scope={scope}")
+
     if project_id:
         proj = Project.objects.get(id=project_id)
     else:
-        proj, created = Project.objects.get_or_create(domain=start_url, defaults={"wcag_level": "A", "status": "pending"})
-    proj.total_pages = max_pages
+        proj, _ = Project.objects.get_or_create(
+            domain=start_url,
+            defaults={"wcag_level": "AA", "status": "pending"}
+        )
+
     proj.status = "crawling"
+    proj.pages_crawled = 0
+    proj.total_pages = 0
+    proj.stop_requested = False
     proj.save()
-    while queue and len(visited) < max_pages:
+
+    visited = set()
+
+    # --- Build the URL queue based on scope ---
+    if scope == SCOPE_SINGLE:
+        queue = [start_url]
+
+    elif scope == SCOPE_MAIN:
+        # Fetch homepage first to extract nav links
+        try:
+            resp = requests.get(start_url, timeout=10, headers={"User-Agent": "WCAGAuditor/1.0"})
+            homepage_html = resp.text
+        except Exception as e:
+            print(f"Failed to fetch homepage: {e}")
+            proj.status = "crawled"
+            proj.save()
+            return
+        main_links = get_main_links(start_url, homepage_html, domain)
+        queue = [start_url] + [l for l in main_links if l != start_url]
+        print(f"Main scope: found {len(queue)} links from navigation")
+
+    else:  # SCOPE_FULL
+        queue = [start_url]
+
+    queued = set(queue)
+    proj.total_pages = len(queue) if scope != SCOPE_FULL else MAX_PAGES_HARD_CAP
+    proj.save()
+
+    # --- Crawl loop ---
+    while queue:
+        if scope == SCOPE_FULL and len(visited) >= MAX_PAGES_HARD_CAP:
+            print(f"Reached hard cap of {MAX_PAGES_HARD_CAP} pages")
+            break
+        if scope in (SCOPE_SINGLE, SCOPE_MAIN) and len(visited) >= len(queued):
+            break
+
+        # Check stop flag (re-fetch from DB each iteration)
+        proj.refresh_from_db()
+        if proj.stop_requested:
+            print(f"Stop requested — halting crawl after {len(visited)} pages")
+            proj.status = "crawled"
+            proj.current_page = ""
+            proj.pages_crawled = len(visited)
+            proj.save()
+            return
+
         url = queue.pop(0)
         if url in visited:
             continue
+
         visited.add(url)
         proj.current_page = url
         proj.pages_crawled = len(visited)
+        proj.total_pages = max(proj.total_pages, len(visited) + len(queue))
         proj.save()
-        print(f"crawling now: {url} ({len(visited)}/{max_pages})")
+
+        print(f"Crawling ({len(visited)}): {url}")
+
         try:
-            resp = requests.get(url, timeout=10)
+            resp = requests.get(url, timeout=10, headers={"User-Agent": "WCAGAuditor/1.0"})
             html = resp.text
-            existing_page = Page.objects.filter(project=proj, url=url).first()
-            if existing_page:
-                existing_page.html_snapshot = html
-                existing_page.status = "pending"
-                existing_page.save()
-                pg = existing_page
-            else:
-                pg = Page.objects.create(project=proj, url=url, html_snapshot=html, status="pending")
+
+            # Save or update page
+            pg, created = Page.objects.update_or_create(
+                project=proj, url=url,
+                defaults={"html_snapshot": html, "status": "pending", "llm_status": "pending"}
+            )
+
+            # Run deterministic analysis + optionally LLM
             try:
-                run_analyzer(pg)
-            except Exception as analyzer_error:
-                print(f"analyzer error on {url}: {str(analyzer_error)}")
+                analyze_page(pg.id, use_llm=use_llm)
+            except Exception as e:
+                print(f"  Analysis error on {url}: {e}")
                 pg.status = "error"
                 pg.save()
-            soup = BeautifulSoup(html, "html.parser")
-            all_links = soup.find_all("a", href=True)
-            links_added = 0
-            for a in all_links:
-                href = a["href"].strip()
-                if not href or href.startswith(('#', 'javascript:', 'mailto:', 'tel:')):
-                    continue
-                new_link = normalize_url(url, href)
-                if new_link in visited or new_link in queued:
-                    continue
-                if domain_only:
-                    if not is_valid_url(new_link, domain):
+
+            # Discover new links (only for full scope)
+            if scope == SCOPE_FULL:
+                soup = BeautifulSoup(html, "html.parser")
+                added = 0
+                for a in soup.find_all("a", href=True):
+                    href = a["href"].strip()
+                    if not href or not is_navigational_link(href):
                         continue
-                queue.append(new_link)
-                queued.add(new_link)
-                links_added += 1
-            print(f"  → Added {links_added} new links to queue (total: {len(queue)})")
+                    new_link = normalize_url(url, href)
+                    if new_link in visited or new_link in queued:
+                        continue
+                    if not is_internal_url(new_link, domain):
+                        continue
+                    queue.append(new_link)
+                    queued.add(new_link)
+                    added += 1
+                if added:
+                    print(f"  → Discovered {added} new links (queue: {len(queue)})")
+
         except Exception as e:
-            print("error on page " + url + " : " + str(e))
+            print(f"  Error fetching {url}: {e}")
+
     proj.status = "crawled"
     proj.current_page = ""
+    proj.pages_crawled = len(visited)
     proj.save()
-    print(f"done crawling! Visited {len(visited)} pages")
+    print(f"Crawl complete. Visited {len(visited)} pages.")

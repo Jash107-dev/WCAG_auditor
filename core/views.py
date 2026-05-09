@@ -1,29 +1,65 @@
 from django.shortcuts import render, redirect
 from django.db.models import Count
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from core.models import Project, Page, Issue, Rule
-from crawler.tasks import crawl_website_task
+from crawler.crawler import crawl
+import threading
+import csv
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.lib.units import inch
+from io import BytesIO
+from datetime import datetime
 
 def home(request):
     if request.method == "POST":
-        url = request.POST.get("url")
-        level = request.POST.get("wcag_level")
-        depth = request.POST.get("crawl_depth", "10")
+        url = request.POST.get("url", "").strip()
+        level = request.POST.get("wcag_level", "AA")
+        scope = request.POST.get("scan_scope", "full")
+        scan_mode = request.POST.get("scan_mode", "standard")  # standard | ai
+
+        # Auto-prepend https:// if missing
+        if url and not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+
+        use_llm = (scan_mode == "ai")
         new_project = Project.objects.create(domain=url, wcag_level=level, status="pending")
-        domain_only_value = request.POST.get("domain_only")
-        domain_only = domain_only_value == "true"
-        print(f"DEBUG: domain_only raw value = {domain_only_value}")
-        print(f"DEBUG: domain_only boolean = {domain_only}")
-        crawl_website_task.delay(url, new_project.id, int(depth), domain_only)
+        thread = threading.Thread(
+            target=crawl,
+            args=(url, new_project.id, scope, use_llm),
+            daemon=True
+        )
+        thread.start()
         return redirect("dashboard", project_id=new_project.id)
     return render(request, "core/home.html")
 
 def crawl_status(request, project_id):
     try:
         proj = Project.objects.get(id=project_id)
-        return JsonResponse({"status": proj.status, "current_page": proj.current_page or "", "pages_crawled": proj.pages_crawled, "total_pages": proj.total_pages})
+        return JsonResponse({
+            "status": proj.status,
+            "current_page": proj.current_page or "",
+            "pages_crawled": proj.pages_crawled,
+            "total_pages": proj.total_pages,
+            "stop_requested": proj.stop_requested,
+        })
     except:
         return JsonResponse({"status": "error", "current_page": "", "pages_crawled": 0, "total_pages": 0})
+
+
+def stop_crawl(request, project_id):
+    """POST — sets stop_requested flag so the crawler halts after current page."""
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+    try:
+        proj = Project.objects.get(id=project_id)
+        proj.stop_requested = True
+        proj.save(update_fields=["stop_requested"])
+        return JsonResponse({"status": "stop_requested", "project_id": project_id})
+    except Project.DoesNotExist:
+        return JsonResponse({"error": "Project not found"}, status=404)
 
 def dashboard(request, project_id):
     proj = Project.objects.get(id=project_id)
@@ -111,8 +147,162 @@ def rules_list(request):
     return render(request, "core/rules.html", {"rules": all_rules})
 
 def reports_list(request):
-    done_projects = Project.objects.filter(status="crawled").order_by("-created_at")
+    # Show all projects that have at least started crawling, annotate with issue count
+    done_projects = Project.objects.exclude(status="pending").annotate(
+        issue_count=Count("page__issue")
+    ).order_by("-created_at")
     return render(request, "core/reports.html", {"projects": done_projects})
 
+
+def export_csv(request, project_id):
+    """Export all issues for a project as a CSV file."""
+    proj = Project.objects.get(id=project_id)
+    all_issues = Issue.objects.filter(page__project=proj).select_related("rule", "page")
+
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = f'attachment; filename="wcag_issues_{project_id}.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(["Page URL", "WCAG Rule ID", "Rule Title", "Level", "Severity", "Message", "Fix Recommendation"])
+
+    for issue in all_issues:
+        writer.writerow([
+            issue.page.url,
+            issue.rule.wcag_id,
+            issue.rule.title,
+            issue.rule.level,
+            issue.severity,
+            issue.message.replace('\n', ' '),
+            issue.fix,
+        ])
+
+    return response
+
 def settings_page(request):
-    return render(request, "core/settings.html")
+    from analyzer.llm import get_llm_client
+    client = get_llm_client()
+    llm_status = {
+        "available": client.available,
+        "provider": client.provider,
+    }
+    return render(request, "core/settings.html", {"llm_status": llm_status})
+
+
+def llm_status_api(request):
+    """JSON endpoint — returns current LLM provider status + optional project progress."""
+    from analyzer.llm import get_llm_client
+    client = get_llm_client()
+
+    response = {
+        "available": client.available,
+        "provider": client.provider,
+    }
+
+    # If project_id passed, include per-project LLM progress
+    project_id = request.GET.get("project_id")
+    if project_id:
+        try:
+            proj = Project.objects.get(id=project_id)
+            pages = proj.page_set.all()
+            total = pages.count()
+            done = pages.filter(llm_status="done").count()
+            running = pages.filter(llm_status="running").count()
+            skipped = pages.filter(llm_status="skipped").count()
+            error = pages.filter(llm_status="error").count()
+            pending = pages.filter(llm_status="pending").count()
+            response.update({
+                "total_pages": total,
+                "done": done,
+                "running": running,
+                "pending": pending,
+                "skipped": skipped,
+                "error": error,
+                "percent": round((done / total * 100), 1) if total > 0 else 0,
+                "finished": (done + skipped + error) == total and total > 0,
+            })
+        except Project.DoesNotExist:
+            pass
+
+    return JsonResponse(response)
+
+
+def trigger_llm_analysis(request, project_id):
+    """
+    POST — runs LLM-only enrichment on already-crawled pages.
+    Does NOT re-crawl or re-run deterministic checks.
+    Only adds AI enhanced fixes, semantic checks, and readability.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    proj = Project.objects.get(id=project_id)
+    # Reset stop flag before starting
+    proj.llm_stop_requested = False
+    proj.save(update_fields=["llm_stop_requested"])
+
+    def run_llm_only():
+        import logging
+        logger = logging.getLogger(__name__)
+        try:
+            from analyzer.llm import get_llm_client
+            from analyzer.engine import _run_llm_enrichment
+            client = get_llm_client()
+            if not client.available:
+                logger.warning("LLM not available — skipping enrichment")
+                return
+
+            pages = list(proj.page_set.all())
+            logger.info(f"LLM enrichment starting for {len(pages)} pages")
+
+            for page in pages:
+                # Check stop flag before each page
+                proj.refresh_from_db()
+                if proj.llm_stop_requested:
+                    logger.info(f"LLM stop requested — halted after processing some pages")
+                    break
+
+                try:
+                    # Build saved_issues from existing DB issues (no re-analysis)
+                    existing_issues = list(
+                        page.issue_set.filter(source="deterministic").select_related("rule")
+                    )
+                    saved = [
+                        (iss, {
+                            "message": iss.message,
+                            "fix": iss.fix,
+                            "element": "",
+                            "source": "deterministic",
+                        })
+                        for iss in existing_issues
+                    ]
+                    _run_llm_enrichment(page, saved, client)
+                    logger.info(f"LLM enrichment done for page {page.id}")
+                except Exception as e:
+                    logger.error(f"LLM enrichment failed for page {page.id}: {e}")
+
+        except Exception as e:
+            logger.error(f"LLM trigger error: {e}")
+
+    thread = threading.Thread(target=run_llm_only, daemon=True)
+    thread.start()
+
+    page_count = proj.page_set.count()
+    return JsonResponse({
+        "status": "started",
+        "project_id": project_id,
+        "pages": page_count,
+        "mode": "llm_only"
+    })
+
+
+def stop_llm_analysis(request, project_id):
+    """POST — sets llm_stop_requested flag to halt AI analysis after current page."""
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+    try:
+        proj = Project.objects.get(id=project_id)
+        proj.llm_stop_requested = True
+        proj.save(update_fields=["llm_stop_requested"])
+        return JsonResponse({"status": "stop_requested", "project_id": project_id})
+    except Project.DoesNotExist:
+        return JsonResponse({"error": "Project not found"}, status=404)

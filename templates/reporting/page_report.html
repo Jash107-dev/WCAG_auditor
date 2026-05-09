@@ -2,48 +2,166 @@
 {% block page_title %}Page Report{% endblock %}
 
 {% block content %}
+
+<!-- Page header -->
 <div class="card" style="margin-bottom:20px;">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
         <div>
-            <h3 style="font-size:15px; font-weight:700; color:#1a1f36;">Page Report</h3>
-            <a href="{{ page.url }}" target="_blank" style="font-size:13px; color:#6c63ff; text-decoration:none;">{{ page.url }}</a>
+            <h3 style="font-size:15px; font-weight:700; color:#1a1f36; margin-bottom:4px;">Page Report</h3>
+            <a href="{{ page.url }}" target="_blank" style="font-size:13px; color:#6c63ff; text-decoration:none; word-break:break-all;">{{ page.url }}</a>
         </div>
-        <span class="severity-{% if page.status == 'pass' %}minor{% else %}critical{% endif %}"
-            style="font-size:13px; padding:6px 16px;">
-            {% if page.status == "pass" %}PASS{% else %}FAIL{% endif %}
-        </span>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <!-- LLM status badge -->
+            {% if page.llm_status == "done" %}
+                <span style="background:#ede9fe; color:#6c63ff; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600;">🤖 AI Enhanced</span>
+            {% elif page.llm_status == "running" %}
+                <span style="background:#fef3c7; color:#d69e2e; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600;">⏳ AI Running…</span>
+            {% elif page.llm_status == "skipped" %}
+                <span style="background:#f0f2f5; color:#8892b0; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600;">⚙️ AI Unavailable</span>
+            {% elif page.llm_status == "error" %}
+                <span style="background:#fff0f0; color:#e53e3e; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600;">⚠️ AI Error</span>
+            {% endif %}
+            <span class="severity-{% if page.status == 'pass' %}minor{% else %}critical{% endif %}" style="font-size:13px; padding:6px 16px;">
+                {% if page.status == "pass" %}✅ PASS{% else %}❌ FAIL{% endif %}
+            </span>
+        </div>
     </div>
 </div>
 
+<!-- Readability card (only if LLM ran) -->
+{% if page.llm_status == "done" and page.readability_level %}
+<div class="card" style="margin-bottom:20px; border-left:4px solid #6c63ff;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+        <span style="font-size:20px;">🤖</span>
+        <h3 style="font-size:14px; font-weight:700; color:#1a1f36;">AI Readability Analysis</h3>
+        <span style="font-size:11px; color:#8892b0; background:#f0f2f5; padding:2px 8px; border-radius:10px;">WCAG 3.1.5</span>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px;">
+        <div style="background:#f8f9fa; border-radius:8px; padding:14px;">
+            <div style="font-size:11px; color:#8892b0; font-weight:600; margin-bottom:6px;">READING LEVEL</div>
+            <div style="font-size:16px; font-weight:700;
+                color:{% if page.readability_level == 'Simple' %}#38a169{% elif page.readability_level == 'Complex' %}#e53e3e{% else %}#d69e2e{% endif %};">
+                {{ page.readability_level }}
+            </div>
+        </div>
+        {% if page.readability_concern %}
+        <div style="background:#fff8f0; border-radius:8px; padding:14px;">
+            <div style="font-size:11px; color:#8892b0; font-weight:600; margin-bottom:6px;">CONCERN</div>
+            <div style="font-size:13px; color:#4a5568; line-height:1.5;">{{ page.readability_concern }}</div>
+        </div>
+        {% endif %}
+        {% if page.readability_improvement %}
+        <div style="background:#f0fff4; border-radius:8px; padding:14px;">
+            <div style="font-size:11px; color:#8892b0; font-weight:600; margin-bottom:6px;">IMPROVEMENT</div>
+            <div style="font-size:13px; color:#4a5568; line-height:1.5;">{{ page.readability_improvement }}</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Issues table -->
 <div class="card">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <h3 style="font-size:14px; font-weight:700; color:#1a1f36;">Issues Found ({{ issues.count }})</h3>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+        <div>
+            <h3 style="font-size:14px; font-weight:700; color:#1a1f36;">Issues Found</h3>
+            <p style="font-size:12px; color:#8892b0; margin-top:3px;">
+                {{ issues.count }} total ·
+                <span style="color:#1a1f36; font-weight:600;">{{ deterministic_count }}</span> deterministic ·
+                <span style="color:#6c63ff; font-weight:600;">{{ llm_count }}</span> AI-detected
+            </p>
+        </div>
         <a href="javascript:history.back()" class="btn-outline">← Back</a>
     </div>
 
-    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+    <!-- Filter tabs -->
+    <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+        <button onclick="filterIssues('all')" id="tab-all"
+            style="padding:6px 14px; border-radius:20px; border:1px solid #6c63ff; background:#6c63ff; color:white; font-size:12px; font-weight:600; cursor:pointer;">
+            All ({{ issues.count }})
+        </button>
+        <button onclick="filterIssues('deterministic')" id="tab-deterministic"
+            style="padding:6px 14px; border-radius:20px; border:1px solid #e2e8f0; background:white; color:#4a5568; font-size:12px; font-weight:600; cursor:pointer;">
+            Deterministic ({{ deterministic_count }})
+        </button>
+        <button onclick="filterIssues('llm')" id="tab-llm"
+            style="padding:6px 14px; border-radius:20px; border:1px solid #e2e8f0; background:white; color:#4a5568; font-size:12px; font-weight:600; cursor:pointer;">
+            🤖 AI-Detected ({{ llm_count }})
+        </button>
+    </div>
+
+    <table style="width:100%; border-collapse:collapse; font-size:13px;" id="issuesTable">
         <thead>
             <tr style="border-bottom:2px solid #f0f2f5;">
-                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Rule ID</th>
-                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Severity</th>
-                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Message</th>
-                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Fix Recommendation</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600; width:80px;">Rule</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600; width:90px;">Severity</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600; width:60px;">Source</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Issue</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Fix</th>
             </tr>
         </thead>
         <tbody>
             {% for issue in issues %}
-            <tr style="border-bottom:1px solid #f0f2f5;">
+            <tr class="issue-row issue-source-{{ issue.source }}" style="border-bottom:1px solid #f0f2f5; vertical-align:top;">
                 <td style="padding:10px; font-weight:700; color:#6c63ff;">{{ issue.rule.wcag_id }}</td>
                 <td style="padding:10px;">
                     <span class="severity-{{ issue.severity }}">{{ issue.severity|capfirst }}</span>
                 </td>
-                <td style="padding:10px; color:#4a5568;">{{ issue.message }}</td>
-                <td style="padding:10px; color:#8892b0; font-size:12px;">{{ issue.fix }}</td>
+                <td style="padding:10px;">
+                    {% if issue.source == "llm" %}
+                        <span style="background:#ede9fe; color:#6c63ff; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600;">🤖 AI</span>
+                    {% else %}
+                        <span style="background:#f0f2f5; color:#8892b0; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600;">Rule</span>
+                    {% endif %}
+                </td>
+                <td style="padding:10px; color:#4a5568; line-height:1.5;">{{ issue.message }}</td>
+                <td style="padding:10px;">
+                    {% if issue.llm_analysis %}
+                    <!-- LLM-enhanced fix -->
+                    <div style="background:#f5f3ff; border-left:3px solid #6c63ff; padding:10px 12px; border-radius:0 6px 6px 0; font-size:12px; color:#4a5568; line-height:1.6;">
+                        <div style="font-size:11px; font-weight:700; color:#6c63ff; margin-bottom:6px;">🤖 AI-Enhanced Fix</div>
+                        {{ issue.llm_analysis|linebreaksbr }}
+                    </div>
+                    {% else %}
+                    <div style="font-size:12px; color:#8892b0; line-height:1.5;">{{ issue.fix }}</div>
+                    {% endif %}
+                </td>
             </tr>
             {% empty %}
-            <tr><td colspan="4" style="padding:30px; text-align:center; color:#38a169; font-weight:600;">✅ No issues found on this page</td></tr>
+            <tr>
+                <td colspan="5" style="padding:30px; text-align:center; color:#38a169; font-weight:600;">
+                    ✅ No issues found on this page
+                </td>
+            </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+
+<script>
+function filterIssues(source) {
+    var rows = document.querySelectorAll('.issue-row');
+    rows.forEach(function(row) {
+        if (source === 'all') {
+            row.style.display = '';
+        } else {
+            row.style.display = row.classList.contains('issue-source-' + source) ? '' : 'none';
+        }
+    });
+    // Update tab styles
+    ['all', 'deterministic', 'llm'].forEach(function(t) {
+        var btn = document.getElementById('tab-' + t);
+        if (t === source) {
+            btn.style.background = '#6c63ff';
+            btn.style.color = 'white';
+            btn.style.borderColor = '#6c63ff';
+        } else {
+            btn.style.background = 'white';
+            btn.style.color = '#4a5568';
+            btn.style.borderColor = '#e2e8f0';
+        }
+    });
+}
+</script>
+
 {% endblock %}

@@ -5,65 +5,136 @@
 {% block content %}
 
 <div id="loadingOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(26,31,54,0.85); z-index:9999; flex-direction:column; align-items:center; justify-content:center;">
-    <div style="background:white; border-radius:16px; padding:40px 50px; text-align:center; min-width:380px;">
+    <div style="background:white; border-radius:16px; padding:40px 50px; text-align:center; min-width:400px;">
         <div style="font-size:36px; margin-bottom:16px;">🔍</div>
         <h3 style="font-size:18px; font-weight:700; color:#1a1f36; margin-bottom:8px;">Scanning in Progress</h3>
         <p id="scanStatusText" style="font-size:13px; color:#8892b0; margin-bottom:24px;">Crawling pages and checking accessibility...</p>
-        <div style="background:#f0f2f5; border-radius:20px; height:10px; overflow:hidden; margin-bottom:16px;">
+        <div style="background:#f0f2f5; border-radius:20px; height:10px; overflow:hidden; margin-bottom:10px;">
             <div id="progressBar" style="height:100%; width:0%; background:linear-gradient(90deg,#6c63ff,#a78bfa); border-radius:20px; transition:width 0.4s ease;"></div>
         </div>
-        <p id="progressText" style="font-size:12px; color:#8892b0;">Starting scan...</p>
+        <p id="progressText" style="font-size:12px; color:#8892b0; margin-bottom:20px;">Starting scan...</p>
+        <button id="stopBtn" onclick="stopScan()"
+            style="background:white; color:#e53e3e; border:2px solid #e53e3e; padding:9px 28px; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; transition:all 0.2s;">
+            ⏹ Stop Scanning
+        </button>
+        <p id="stopMsg" style="font-size:11px; color:#e53e3e; margin-top:8px; display:none;">Stopping after current page...</p>
     </div>
 </div>
 
-<div class="card" style="margin-bottom: 24px;">
-    <h3 style="font-size:15px; font-weight:700; color:#1a1f36; margin-bottom:16px;">Start New Scan</h3>
-    <form id="scanForm" method="POST" action="/">
-        {% csrf_token %}
-        <input type="hidden" name="domain_only" id="domainOnlyInput" value="true">
-        <div style="display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap;">
+<div class="card" style="margin-bottom:24px; background:linear-gradient(135deg,#1a1f36 0%,#2d3561 100%); border:none; overflow:hidden; position:relative;">
+    <!-- subtle background pattern -->
+    <div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:rgba(108,99,255,0.15);border-radius:50%;pointer-events:none;"></div>
+    <div style="position:absolute;bottom:-60px;right:80px;width:150px;height:150px;background:rgba(167,139,250,0.08);border-radius:50%;pointer-events:none;"></div>
 
-            <div style="flex:2; min-width:220px;">
-                <label style="font-size:12px; color:#8892b0; font-weight:600; display:block; margin-bottom:6px;">Website URL</label>
-                <div style="display:flex; align-items:center; border:1px solid #e2e8f0; border-radius:8px; padding:0 12px; background:white;">
-                    <span style="color:#8892b0; margin-right:8px;">🌐</span>
-                    <input type="url" name="url" placeholder="https://example.com" required
-                        style="border:none; outline:none; padding:10px 0; font-size:14px; width:100%; color:#1a1f36;">
+    <div style="position:relative;">
+        <div style="margin-bottom:18px;">
+            <h3 style="font-size:16px; font-weight:700; color:white; margin-bottom:4px;">Start New Accessibility Scan</h3>
+            <p style="font-size:12px; color:#8892b0;">Enter a URL and choose your scan scope to begin</p>
+        </div>
+
+        <form id="scanForm" method="POST" action="/">
+            {% csrf_token %}
+            <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:16px;">
+
+                <div style="flex:2; min-width:220px;">
+                    <label style="font-size:11px; color:#8892b0; font-weight:600; display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Website URL</label>
+                    <div style="display:flex; align-items:center; background:rgba(255,255,255,0.08); border:1.5px solid rgba(255,255,255,0.12); border-radius:10px; padding:0 14px; transition:border-color 0.2s;">
+                        <span style="color:#6c63ff; margin-right:10px; font-size:16px;">🌐</span>
+                        <input type="text" name="url" placeholder="example.com or https://example.com" required
+                            style="border:none; outline:none; padding:11px 0; font-size:14px; width:100%; color:white; background:transparent;"
+                            onfocus="this.parentElement.style.borderColor='#6c63ff'"
+                            onblur="this.parentElement.style.borderColor='rgba(255,255,255,0.12)'">
+                    </div>
+                </div>
+
+                <div style="flex:1; min-width:160px;">
+                    <label style="font-size:11px; color:#8892b0; font-weight:600; display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">WCAG Level</label>
+                    <select name="wcag_level" style="width:100%; background:rgba(255,255,255,0.08); border:1.5px solid rgba(255,255,255,0.12); border-radius:10px; padding:11px 14px; font-size:13.5px; color:white; outline:none; cursor:pointer;">
+                        <option value="A" style="background:#1a1f36;">A — Basic</option>
+                        <option value="AA" selected style="background:#1a1f36;">AA — Recommended</option>
+                        <option value="AAA" style="background:#1a1f36;">AAA — Enhanced</option>
+                    </select>
+                </div>
+
+                <div>
+                    <button type="submit" class="btn-primary" style="padding:11px 28px; font-size:14px;">
+                        ▶ Start Scan
+                    </button>
                 </div>
             </div>
 
-            <div style="flex:1; min-width:180px;">
-                <label style="font-size:12px; color:#8892b0; font-weight:600; display:block; margin-bottom:6px;">WCAG Compliance Level</label>
-                <select name="wcag_level" style="width:100%; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; font-size:14px; color:#1a1f36; outline:none; background:white;">
-                    <option value="A">A (Basic)</option>
-                    <option value="AA" selected>AA (Recommended)</option>
-                    <option value="AAA">AAA (Enhanced)</option>
-                </select>
-            </div>
+            <!-- Scan Mode -->
+        <div style="margin-bottom:16px;">
+            <label style="font-size:11px; color:#8892b0; font-weight:600; display:block; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.5px;">Scan Mode</label>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
 
-            <div style="flex:1; min-width:150px;">
-                <label style="font-size:12px; color:#8892b0; font-weight:600; display:block; margin-bottom:6px;">Crawl Depth</label>
-                <select name="crawl_depth" style="width:100%; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; font-size:14px; color:#1a1f36; outline:none; background:white;">
-                    <option value="5">1 Level</option>
-                    <option value="10" selected>3 Levels</option>
-                    <option value="25">5 Levels</option>
-                    <option value="50">10 Levels</option>
-                </select>
-            </div>
+                <label id="mode-standard" style="flex:1; min-width:160px; background:rgba(108,99,255,0.2); border:1.5px solid #6c63ff; border-radius:10px; padding:14px 16px; cursor:pointer; transition:all 0.2s;">
+                    <input type="radio" name="scan_mode" value="standard" checked style="display:none;">
+                    <div style="display:flex; align-items:flex-start; gap:12px;">
+                        <span style="font-size:24px; margin-top:2px;">⚡</span>
+                        <div>
+                            <div class="mode-title" style="font-size:13px; font-weight:700; color:white; margin-bottom:3px;">Standard Scan</div>
+                            <div style="font-size:11px; color:#a78bfa; line-height:1.5;">Deterministic checks only. Fast results with rule-based fix suggestions.</div>
+                        </div>
+                    </div>
+                </label>
 
+                <label id="mode-ai" style="flex:1; min-width:160px; background:rgba(255,255,255,0.05); border:1.5px solid rgba(255,255,255,0.1); border-radius:10px; padding:14px 16px; cursor:pointer; transition:all 0.2s;">
+                    <input type="radio" name="scan_mode" value="ai" style="display:none;">
+                    <div style="display:flex; align-items:flex-start; gap:12px;">
+                        <span style="font-size:24px; margin-top:2px;">🤖</span>
+                        <div>
+                            <div class="mode-title" style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.7); margin-bottom:3px;">AI-Powered Scan <span style="background:rgba(108,99,255,0.5); color:white; font-size:10px; padding:1px 6px; border-radius:10px; margin-left:4px;">Recommended</span></div>
+                            <div style="font-size:11px; color:#6b7a99; line-height:1.5;">Deterministic + LLM analysis. AI-enhanced fix suggestions, semantic checks & readability scoring.</div>
+                        </div>
+                    </div>
+                </label>
+
+            </div>
+        </div>
+
+        <!-- Scan Scope -->
             <div>
-                <button type="submit" class="btn-primary" style="padding:11px 24px;">▶ Start Scan</button>
-            </div>
+                <label style="font-size:11px; color:#8892b0; font-weight:600; display:block; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.5px;">Scan Scope</label>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
 
-        </div>
+                    <label id="scope-single" style="flex:1; min-width:130px; background:rgba(255,255,255,0.05); border:1.5px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px 14px; cursor:pointer; transition:all 0.2s;">
+                        <input type="radio" name="scan_scope" value="single" style="display:none;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="font-size:20px;">📄</span>
+                            <div>
+                                <div class="scope-title" style="font-size:13px; font-weight:600; color:rgba(255,255,255,0.7);">Single Page</div>
+                                <div style="font-size:11px; color:#6b7a99; margin-top:1px;">Entered URL only</div>
+                            </div>
+                        </div>
+                    </label>
 
-        <div style="margin-top:12px; display:flex; align-items:center; gap:10px; justify-content:flex-end;">
-            <span style="font-size:13px; color:#8892b0;">Domain Only</span>
-            <div id="toggleSwitch" onclick="toggleDomainOnly()" style="width:44px; height:24px; background:#6c63ff; border-radius:12px; position:relative; cursor:pointer; transition:background 0.2s;">
-                <div id="toggleKnob" style="width:18px; height:18px; background:white; border-radius:50%; position:absolute; top:3px; right:3px; transition:right 0.2s;"></div>
+                    <label id="scope-main" style="flex:1; min-width:130px; background:rgba(255,255,255,0.05); border:1.5px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px 14px; cursor:pointer; transition:all 0.2s;">
+                        <input type="radio" name="scan_scope" value="main" style="display:none;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="font-size:20px;">🗂️</span>
+                            <div>
+                                <div class="scope-title" style="font-size:13px; font-weight:600; color:rgba(255,255,255,0.7);">Main Pages</div>
+                                <div style="font-size:11px; color:#6b7a99; margin-top:1px;">Nav + homepage links</div>
+                            </div>
+                        </div>
+                    </label>
+
+                    <label id="scope-full" style="flex:1; min-width:130px; background:rgba(108,99,255,0.2); border:1.5px solid #6c63ff; border-radius:10px; padding:12px 14px; cursor:pointer; transition:all 0.2s;">
+                        <input type="radio" name="scan_scope" value="full" checked style="display:none;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span style="font-size:20px;">🌐</span>
+                            <div>
+                                <div class="scope-title" style="font-size:13px; font-weight:600; color:white;">Full Site</div>
+                                <div style="font-size:11px; color:#a78bfa; margin-top:1px;">All internal pages</div>
+                            </div>
+                        </div>
+                    </label>
+
+                </div>
             </div>
-        </div>
-    </form>
+        </form>
+    </div>
 </div>
 
 <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:16px; margin-bottom:24px;">
@@ -139,28 +210,54 @@
 </div>
 
 <script>
-var domainOnly = true;
-function toggleDomainOnly() {
-    domainOnly = !domainOnly;
-    var knob = document.getElementById("toggleKnob");
-    var sw = document.getElementById("toggleSwitch");
-    var inp = document.getElementById("domainOnlyInput");
-    if (domainOnly) {
-        sw.style.background = "#6c63ff";
-        knob.style.right = "3px";
-        knob.style.left = "auto";
-        inp.value = "true";
-    } else {
-        sw.style.background = "#cbd5e0";
-        knob.style.left = "3px";
-        knob.style.right = "auto";
-        inp.value = "false";
-    }
-}
+// Mode selector
+document.querySelectorAll('input[name="scan_mode"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        ['standard','ai'].forEach(function(m) {
+            var lbl = document.getElementById('mode-' + m);
+            if (!lbl) return;
+            lbl.style.border = '1.5px solid rgba(255,255,255,0.1)';
+            lbl.style.background = 'rgba(255,255,255,0.05)';
+            lbl.querySelector('.mode-title').style.color = 'rgba(255,255,255,0.7)';
+        });
+        var sel = document.getElementById('mode-' + this.value);
+        if (sel) {
+            sel.style.border = '1.5px solid #6c63ff';
+            sel.style.background = 'rgba(108,99,255,0.2)';
+            sel.querySelector('.mode-title').style.color = 'white';
+        }
+    });
+});
+
+// Scope selector
+document.querySelectorAll('input[name="scan_scope"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        ['single','main','full'].forEach(function(s) {
+            var lbl = document.getElementById('scope-' + s);
+            if (!lbl) return;
+            lbl.style.border = '1.5px solid rgba(255,255,255,0.1)';
+            lbl.style.background = 'rgba(255,255,255,0.05)';
+            lbl.querySelector('.scope-title').style.color = 'rgba(255,255,255,0.7)';
+        });
+        var sel = document.getElementById('scope-' + this.value);
+        if (sel) {
+            sel.style.border = '1.5px solid #6c63ff';
+            sel.style.background = 'rgba(108,99,255,0.2)';
+            sel.querySelector('.scope-title').style.color = 'white';
+        }
+    });
+});
+
 var projectId = null;
 var checkInterval = null;
+
 document.getElementById("scanForm").addEventListener("submit", function(e) {
     var overlay = document.getElementById("loadingOverlay");
+    var scanMode = document.querySelector('input[name="scan_mode"]:checked');
+    var isAI = scanMode && scanMode.value === 'ai';
+    document.getElementById("scanStatusText").textContent = isAI
+        ? "Crawling pages and running AI analysis..."
+        : "Crawling pages and checking accessibility...";
     overlay.style.display = "flex";
     var form = e.target;
     var formData = new FormData(form);
@@ -168,29 +265,53 @@ document.getElementById("scanForm").addEventListener("submit", function(e) {
     fetch(form.action, {method: 'POST', body: formData}).then(response => {
         var redirectUrl = response.url;
         projectId = redirectUrl.split('/dashboard/')[1].replace('/', '');
-        checkInterval = setInterval(checkCrawlStatus, 1000);
+        checkInterval = setInterval(checkCrawlStatus, 1500);
     });
 });
+
 function checkCrawlStatus() {
     if (!projectId) return;
-    fetch('/crawl-status/' + projectId + '/').then(response => response.json()).then(data => {
+    fetch('/crawl-status/' + projectId + '/').then(r => r.json()).then(data => {
         var statusTxt = document.getElementById("scanStatusText");
         var progressTxt = document.getElementById("progressText");
         var bar = document.getElementById("progressBar");
+        var stopBtn = document.getElementById("stopBtn");
         if (data.status === "crawling") {
-            var percent = data.total_pages > 0 ? Math.round((data.pages_crawled / data.total_pages) * 100) : 0;
-            bar.style.width = percent + "%";
-            statusTxt.textContent = "Crawling: " + data.current_page;
-            progressTxt.textContent = "Page " + data.pages_crawled + " of " + data.total_pages;
+            if (data.stop_requested) {
+                statusTxt.textContent = "Finishing current page, then stopping...";
+                progressTxt.textContent = data.pages_crawled + " pages scanned";
+                bar.style.width = "95%";
+                if (stopBtn) { stopBtn.disabled = true; stopBtn.textContent = '⏳ Stopping...'; }
+            } else {
+                var pct = data.total_pages > 0 ? Math.round((data.pages_crawled / data.total_pages) * 100) : 10;
+                bar.style.width = Math.min(pct, 95) + "%";
+                statusTxt.textContent = "Crawling: " + (data.current_page || "...");
+                progressTxt.textContent = data.pages_crawled + " pages scanned so far...";
+            }
         } else if (data.status === "crawled") {
             clearInterval(checkInterval);
             bar.style.width = "100%";
-            statusTxt.textContent = "Scan complete!";
-            progressTxt.textContent = "Redirecting...";
-            setTimeout(function() {
-                window.location.href = "/dashboard/" + projectId + "/";
-            }, 1000);
+            statusTxt.textContent = data.stop_requested ? "Scan stopped — " + data.pages_crawled + " pages scanned" : "Scan complete!";
+            progressTxt.textContent = "Redirecting to dashboard...";
+            setTimeout(function() { window.location.href = "/dashboard/" + projectId + "/"; }, 800);
         }
+    });
+}
+
+function stopScan() {
+    if (!projectId) return;
+    var btn = document.getElementById('stopBtn');
+    var msg = document.getElementById('stopMsg');
+    btn.disabled = true;
+    btn.textContent = '⏳ Stopping...';
+    btn.style.opacity = '0.6';
+    msg.style.display = 'block';
+    msg.textContent = 'Finishing current page, then stopping...';
+    var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    fetch('/stop-crawl/' + projectId + '/', {
+        method: 'POST', headers: {'X-CSRFToken': csrfToken}
+    }).then(r => r.json()).then(function() {
+        document.getElementById('scanStatusText').textContent = 'Finishing current page, then stopping...';
     });
 }
 </script>

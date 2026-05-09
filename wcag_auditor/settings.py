@@ -66,12 +66,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'wcag_auditor.wsgi.application'
 
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
+# Database — PostgreSQL
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'wcag_db'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
@@ -112,3 +115,16 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
+
+# ---------------------------------------------------------------------------
+# LLM Configuration (Phase 4)
+# ---------------------------------------------------------------------------
+# Provider: Groq API — LLaMA 3.1 8B Instant
+# Free tier: 14,400 requests/day | Speed: ~1s per request
+# Get your key at: https://console.groq.com
+# Set via environment variable: set GROQ_API_KEY=gsk_...
+# Or create a .env file (never commit it)
+
+import os
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+GROQ_MODEL   = 'llama-3.1-8b-instant'
