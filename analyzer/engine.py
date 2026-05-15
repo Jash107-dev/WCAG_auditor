@@ -53,7 +53,7 @@ def calculate_compliance_score(issues: list) -> int:
     return max(0, 100 - deductions)
 
 
-
+def get_or_create_rule(wcag_id: str) -> Rule:
     rule = Rule.objects.filter(wcag_id=wcag_id).first()
     if not rule:
         title, level, category = RULE_DEFAULTS.get(
