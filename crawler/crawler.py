@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 from core.models import Page, Project
 from analyzer.engine import analyze_page
+from crawler.fetcher import fetch_page
 
 # Scan scope constants
 SCOPE_SINGLE   = "single"    # Only the entered URL
@@ -104,8 +105,7 @@ def crawl(start_url, project_id=None, scope=SCOPE_FULL, use_llm=False):
     elif scope == SCOPE_MAIN:
         # Fetch homepage first to extract nav links
         try:
-            resp = requests.get(start_url, timeout=10, headers={"User-Agent": "WCAGAuditor/1.0"})
-            homepage_html = resp.text
+            homepage_html, _ = fetch_page(start_url)
         except Exception as e:
             print(f"Failed to fetch homepage: {e}")
             proj.status = "crawled"
@@ -153,8 +153,8 @@ def crawl(start_url, project_id=None, scope=SCOPE_FULL, use_llm=False):
         print(f"Crawling ({len(visited)}): {url}")
 
         try:
-            resp = requests.get(url, timeout=10, headers={"User-Agent": "WCAGAuditor/1.0"})
-            html = resp.text
+            html, fetch_method = fetch_page(url)
+            print(f"  Fetched via {fetch_method} ({len(html)} chars)")
 
             # Save or update page
             pg, created = Page.objects.update_or_create(

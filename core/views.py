@@ -26,14 +26,36 @@ def home(request):
 
         use_llm = (scan_mode == "ai")
         new_project = Project.objects.create(domain=url, wcag_level=level, status="pending")
-        thread = threading.Thread(
-            target=crawl,
-            args=(url, new_project.id, scope, use_llm),
-            daemon=True
-        )
-        thread.start()
+
+        # Try Celery first, fall back to thread if Redis not available
+        dispatched = _dispatch_crawl(url, new_project.id, scope, use_llm)
+        if not dispatched:
+            thread = threading.Thread(
+                target=crawl,
+                args=(url, new_project.id, scope, use_llm),
+                daemon=True
+            )
+            thread.start()
+
         return redirect("dashboard", project_id=new_project.id)
     return render(request, "core/home.html")
+
+
+def _dispatch_crawl(url, project_id, scope, use_llm):
+    """
+    Try to dispatch crawl via Celery. Returns True if successful, False if
+    Redis/Celery unavailable (caller should fall back to threading).
+    """
+    try:
+        from crawler.tasks import crawl_website_task
+        crawl_website_task.delay(url, project_id, scope, use_llm)
+        return True
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(
+            f"Celery unavailable ({e}), falling back to thread"
+        )
+        return False
 
 def crawl_status(request, project_id):
     try:
@@ -332,12 +354,14 @@ def rescan_project(request, project_id):
     # Delete old pages and issues
     proj.page_set.all().delete()
 
-    thread = threading.Thread(
-        target=crawl,
-        args=(proj.domain, proj.id, "full", use_llm),
-        daemon=True
-    )
-    thread.start()
+    dispatched = _dispatch_crawl(proj.domain, proj.id, "full", use_llm)
+    if not dispatched:
+        thread = threading.Thread(
+            target=crawl,
+            args=(proj.domain, proj.id, "full", use_llm),
+            daemon=True
+        )
+        thread.start()
 
     return redirect("dashboard", project_id=proj.id)
 
