@@ -20,23 +20,40 @@ logger = logging.getLogger(__name__)
 RULE_DEFAULTS = {
     "1.1.1": ("Non-text Content",           "A",  "Perceivable"),
     "1.3.1": ("Info and Relationships",     "A",  "Perceivable"),
+    "1.4.3": ("Contrast (Minimum)",         "AA", "Perceivable"),
+    "2.1.1": ("Keyboard",                   "A",  "Operable"),
+    "2.4.1": ("Bypass Blocks",              "A",  "Operable"),
     "2.4.2": ("Page Titled",                "A",  "Operable"),
+    "2.4.3": ("Focus Order",                "A",  "Operable"),
     "2.4.4": ("Link Purpose (In Context)",  "A",  "Operable"),
+    "2.4.6": ("Headings and Labels",        "AA", "Operable"),
+    "2.4.7": ("Focus Visible",              "AA", "Operable"),
     "3.1.1": ("Language of Page",           "A",  "Understandable"),
     "3.1.5": ("Reading Level",              "AAA","Understandable"),
     "3.3.2": ("Labels or Instructions",     "A",  "Understandable"),
+    "4.1.1": ("Parsing",                    "A",  "Robust"),
     "4.1.2": ("Name, Role, Value",          "A",  "Robust"),
     "1.3.4": ("Orientation",                "AA", "Perceivable"),
-    "1.4.3": ("Contrast (Minimum)",         "AA", "Perceivable"),
-    "2.4.6": ("Headings and Labels",        "AA", "Operable"),
-    "4.1.1": ("Parsing",                    "A",  "Robust"),
 }
 
 # Max issues to enrich with LLM per page (keeps analysis fast)
 LLM_ENRICH_LIMIT = 5
 
 
-def get_or_create_rule(wcag_id: str) -> Rule:
+def calculate_compliance_score(issues: list) -> int:
+    """
+    Score 0–100 based on issue severity.
+    Deductions: critical=20, serious=10, moderate=5, minor=2
+    Minimum score is 0.
+    """
+    deductions = 0
+    for issue in issues:
+        sev = issue.get("severity", "minor") if isinstance(issue, dict) else getattr(issue, "severity", "minor")
+        deductions += {"critical": 20, "serious": 10, "moderate": 5, "minor": 2}.get(sev, 2)
+    return max(0, 100 - deductions)
+
+
+
     rule = Rule.objects.filter(wcag_id=wcag_id).first()
     if not rule:
         title, level, category = RULE_DEFAULTS.get(
@@ -169,10 +186,11 @@ def analyze_page(page_id: int, use_llm: bool = True) -> bool:
     issues_found = run_all_checks(page.html_snapshot)
     saved_issues = _save_issues(page, issues_found, source="deterministic")
 
-    # Set page status based on deterministic results
+    # Set page status and compliance score based on deterministic results
     page.status = "fail" if issues_found else "pass"
+    page.compliance_score = calculate_compliance_score(issues_found)
     page.llm_status = "pending"
-    page.save(update_fields=["status", "llm_status"])
+    page.save(update_fields=["status", "compliance_score", "llm_status"])
 
     logger.info(f"Deterministic: {len(issues_found)} issues on {page.url}")
 

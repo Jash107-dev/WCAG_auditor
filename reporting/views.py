@@ -7,6 +7,18 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from core.models import Page, Issue, Project
+import html as html_module
+
+
+def safe_para(text, style, max_len=None):
+    """Escape HTML special chars so ReportLab's XML parser never chokes."""
+    if max_len:
+        text = text[:max_len]
+    # Strip newlines for table cells
+    text = text.replace('\n', ' ').replace('\r', '')
+    # Escape <, >, & so unclosed tags don't crash the parser
+    text = html_module.escape(text)
+    return Paragraph(text, style)
 
 
 def page_report(request, page_id):
@@ -17,11 +29,14 @@ def page_report(request, page_id):
     )
     deterministic_count = pg_issues.filter(source="deterministic").count()
     llm_count = pg_issues.filter(source="llm").count()
+    # Issues that were AI-enhanced (have llm_analysis) but are deterministic source
+    ai_enhanced_count = pg_issues.filter(source="deterministic").exclude(llm_analysis__isnull=True).exclude(llm_analysis="").count()
     return render(request, "reporting/page_report.html", {
         "page": pg,
         "issues": pg_issues,
         "deterministic_count": deterministic_count,
         "llm_count": llm_count,
+        "ai_enhanced_count": ai_enhanced_count,
     })
 
 
@@ -90,7 +105,7 @@ def export_pdf(request, project_id):
         textColor=colors.HexColor("#8892b0"))
 
     story.append(Paragraph("WCAG Accessiblity Audit Report", title_style))
-    story.append(Paragraph("Domain: " + proj.domain, normal_style))
+    story.append(Paragraph(html_module.escape("Domain: " + proj.domain), normal_style))
     story.append(Paragraph("WCAG Level: " + proj.wcag_level, normal_style))
     story.append(Paragraph("Status: " + proj.status, normal_style))
     story.append(Spacer(1, 0.2*inch))
@@ -136,10 +151,10 @@ def export_pdf(request, project_id):
     issue_data = [["Page URL", "Rule", "Severity", "Message"]]
     for issue in all_issues[:100]:
         issue_data.append([
-            Paragraph(issue.page.url[:50], small_style),
+            safe_para(issue.page.url, small_style, max_len=60),
             issue.rule.wcag_id,
             issue.severity,
-            Paragraph(issue.message[:80], small_style),
+            safe_para(issue.message, small_style, max_len=120),
         ])
 
     if len(issue_data) > 1:

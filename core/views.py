@@ -306,3 +306,69 @@ def stop_llm_analysis(request, project_id):
         return JsonResponse({"status": "stop_requested", "project_id": project_id})
     except Project.DoesNotExist:
         return JsonResponse({"error": "Project not found"}, status=404)
+
+
+def rescan_project(request, project_id):
+    """POST — re-crawl and re-analyse an existing project from scratch."""
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+    try:
+        proj = Project.objects.get(id=project_id)
+    except Project.DoesNotExist:
+        return JsonResponse({"error": "Project not found"}, status=404)
+
+    scan_mode = request.POST.get("scan_mode", "standard")
+    use_llm = (scan_mode == "ai")
+
+    # Reset project state
+    proj.status = "pending"
+    proj.pages_crawled = 0
+    proj.total_pages = 0
+    proj.stop_requested = False
+    proj.llm_stop_requested = False
+    proj.current_page = ""
+    proj.save()
+
+    # Delete old pages and issues
+    proj.page_set.all().delete()
+
+    thread = threading.Thread(
+        target=crawl,
+        args=(proj.domain, proj.id, "full", use_llm),
+        daemon=True
+    )
+    thread.start()
+
+    return redirect("dashboard", project_id=proj.id)
+
+
+def dismiss_issue(request, issue_id):
+    """POST — dismiss an issue as false positive / not applicable / accepted risk."""
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+    try:
+        issue = Issue.objects.get(id=issue_id)
+        reason = request.POST.get("reason", "false_positive")
+        note = request.POST.get("note", "")
+        issue.dismissed = True
+        issue.dismissal_reason = reason
+        issue.dismissal_note = note
+        issue.save(update_fields=["dismissed", "dismissal_reason", "dismissal_note"])
+        return JsonResponse({"status": "dismissed", "issue_id": issue_id})
+    except Issue.DoesNotExist:
+        return JsonResponse({"error": "Issue not found"}, status=404)
+
+
+def undismiss_issue(request, issue_id):
+    """POST — restore a dismissed issue."""
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+    try:
+        issue = Issue.objects.get(id=issue_id)
+        issue.dismissed = False
+        issue.dismissal_reason = None
+        issue.dismissal_note = None
+        issue.save(update_fields=["dismissed", "dismissal_reason", "dismissal_note"])
+        return JsonResponse({"status": "restored", "issue_id": issue_id})
+    except Issue.DoesNotExist:
+        return JsonResponse({"error": "Issue not found"}, status=404)

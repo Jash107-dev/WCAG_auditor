@@ -38,6 +38,7 @@
                 <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">URL</th>
                 <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Project</th>
                 <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Status</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Score</th>
                 <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Issues</th>
                 <th style="padding:10px;"></th>
             </tr>
@@ -56,6 +57,20 @@
                     {% else %}
                         <span style="background:#fef3c7; color:#d69e2e; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600;">{{ page.status|capfirst }}</span>
                     {% endif %}
+                </td>
+                <td style="padding:10px;">
+                    {% with score=page.compliance_score %}
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <div style="flex:1; background:#f0f2f5; border-radius:20px; height:6px; min-width:60px;">
+                            <div style="height:6px; border-radius:20px; width:{{ score }}%;
+                                background:{% if score >= 80 %}#38a169{% elif score >= 50 %}#d69e2e{% else %}#e53e3e{% endif %};"></div>
+                        </div>
+                        <span style="font-size:12px; font-weight:700;
+                            color:{% if score >= 80 %}#38a169{% elif score >= 50 %}#d69e2e{% else %}#e53e3e{% endif %};">
+                            {{ score }}
+                        </span>
+                    </div>
+                    {% endwith %}
                 </td>
                 <td style="padding:10px; color:#4a5568;">{{ page.issue_set.count }}</td>
                 <td style="padding:10px;">

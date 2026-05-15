@@ -19,4 +19,9 @@ urlpatterns = [
     path("llm/status/", views.llm_status_api, name="llm_status"),
     path("llm/analyze/<int:project_id>/", views.trigger_llm_analysis, name="trigger_llm"),
     path("llm/stop/<int:project_id>/", views.stop_llm_analysis, name="stop_llm"),
+    # Re-scan
+    path("rescan/<int:project_id>/", views.rescan_project, name="rescan"),
+    # Issue dismissal
+    path("issue/dismiss/<int:issue_id>/", views.dismiss_issue, name="dismiss_issue"),
+    path("issue/undismiss/<int:issue_id>/", views.undismiss_issue, name="undismiss_issue"),
 ]

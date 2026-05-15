@@ -11,6 +11,15 @@
             <a href="{{ page.url }}" target="_blank" style="font-size:13px; color:#6c63ff; text-decoration:none; word-break:break-all;">{{ page.url }}</a>
         </div>
         <div style="display:flex; align-items:center; gap:10px;">
+            <!-- Compliance Score -->
+            <div style="text-align:center; background:#f8f9fa; border-radius:10px; padding:8px 16px; min-width:80px;">
+                <div style="font-size:10px; color:#8892b0; font-weight:600; margin-bottom:2px;">SCORE</div>
+                <div style="font-size:22px; font-weight:800;
+                    color:{% if page.compliance_score >= 80 %}#38a169{% elif page.compliance_score >= 50 %}#d69e2e{% else %}#e53e3e{% endif %};">
+                    {{ page.compliance_score }}
+                </div>
+                <div style="font-size:9px; color:#8892b0;">/100</div>
+            </div>
             <!-- LLM status badge -->
             {% if page.llm_status == "done" %}
                 <span style="background:#ede9fe; color:#6c63ff; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600;">🤖 AI Enhanced</span>
@@ -68,7 +77,8 @@
             <p style="font-size:12px; color:#8892b0; margin-top:3px;">
                 {{ issues.count }} total ·
                 <span style="color:#1a1f36; font-weight:600;">{{ deterministic_count }}</span> deterministic ·
-                <span style="color:#6c63ff; font-weight:600;">{{ llm_count }}</span> AI-detected
+                <span style="color:#6c63ff; font-weight:600;">{{ llm_count }}</span> AI-detected ·
+                <span style="color:#6c63ff; font-weight:600;">{{ ai_enhanced_count }}</span> AI-enhanced fixes
             </p>
         </div>
         <a href="javascript:history.back()" class="btn-outline">← Back</a>
@@ -88,6 +98,12 @@
             style="padding:6px 14px; border-radius:20px; border:1px solid #e2e8f0; background:white; color:#4a5568; font-size:12px; font-weight:600; cursor:pointer;">
             🤖 AI-Detected ({{ llm_count }})
         </button>
+        {% if ai_enhanced_count > 0 %}
+        <button onclick="filterIssues('enhanced')" id="tab-enhanced"
+            style="padding:6px 14px; border-radius:20px; border:1px solid #e2e8f0; background:white; color:#6c63ff; font-size:12px; font-weight:600; cursor:pointer;">
+            ✨ AI-Enhanced ({{ ai_enhanced_count }})
+        </button>
+        {% endif %}
     </div>
 
     <table style="width:100%; border-collapse:collapse; font-size:13px;" id="issuesTable">
@@ -98,11 +114,14 @@
                 <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600; width:60px;">Source</th>
                 <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Issue</th>
                 <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Fix</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600; width:100px;">Action</th>
             </tr>
         </thead>
         <tbody>
             {% for issue in issues %}
-            <tr class="issue-row issue-source-{{ issue.source }}" style="border-bottom:1px solid #f0f2f5; vertical-align:top;">
+            <tr class="issue-row issue-source-{{ issue.source }}{% if issue.llm_analysis %} issue-source-enhanced{% endif %}{% if issue.dismissed %} issue-dismissed{% endif %}"
+                id="issue-row-{{ issue.id }}"
+                style="border-bottom:1px solid #f0f2f5; vertical-align:top;{% if issue.dismissed %} opacity:0.45;{% endif %}">
                 <td style="padding:10px; font-weight:700; color:#6c63ff;">{{ issue.rule.wcag_id }}</td>
                 <td style="padding:10px;">
                     <span class="severity-{{ issue.severity }}">{{ issue.severity|capfirst }}</span>
@@ -113,17 +132,41 @@
                     {% else %}
                         <span style="background:#f0f2f5; color:#8892b0; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600;">Rule</span>
                     {% endif %}
+                    {% if issue.dismissed %}
+                        <br><span style="background:#fef3c7; color:#b7791f; padding:2px 6px; border-radius:8px; font-size:10px; font-weight:600; margin-top:3px; display:inline-block;">
+                            {{ issue.get_dismissal_reason_display }}
+                        </span>
+                    {% endif %}
                 </td>
                 <td style="padding:10px; color:#4a5568; line-height:1.5;">{{ issue.message }}</td>
                 <td style="padding:10px;">
                     {% if issue.llm_analysis %}
-                    <!-- LLM-enhanced fix -->
                     <div style="background:#f5f3ff; border-left:3px solid #6c63ff; padding:10px 12px; border-radius:0 6px 6px 0; font-size:12px; color:#4a5568; line-height:1.6;">
                         <div style="font-size:11px; font-weight:700; color:#6c63ff; margin-bottom:6px;">🤖 AI-Enhanced Fix</div>
                         {{ issue.llm_analysis|linebreaksbr }}
                     </div>
                     {% else %}
                     <div style="font-size:12px; color:#8892b0; line-height:1.5;">{{ issue.fix }}</div>
+                    {% endif %}
+                </td>
+                <td style="padding:10px; white-space:nowrap;">
+                    {% if not issue.dismissed %}
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        <select id="reason-{{ issue.id }}" style="font-size:11px; padding:3px 6px; border:1px solid #e2e8f0; border-radius:6px; color:#4a5568; background:white;">
+                            <option value="false_positive">False Positive</option>
+                            <option value="not_applicable">Not Applicable</option>
+                            <option value="accepted_risk">Accepted Risk</option>
+                        </select>
+                        <button onclick="dismissIssue({{ issue.id }})"
+                            style="font-size:11px; padding:3px 10px; border-radius:6px; border:1px solid #e2e8f0; background:white; color:#8892b0; cursor:pointer;">
+                            Dismiss
+                        </button>
+                    </div>
+                    {% else %}
+                    <button onclick="undismissIssue({{ issue.id }})"
+                        style="font-size:11px; padding:3px 10px; border-radius:6px; border:1px solid #38a169; background:white; color:#38a169; cursor:pointer;">
+                        Restore
+                    </button>
                     {% endif %}
                 </td>
             </tr>
@@ -139,6 +182,36 @@
 </div>
 
 <script>
+var csrfToken = '{{ csrf_token }}';
+
+function dismissIssue(issueId) {
+    var reason = document.getElementById('reason-' + issueId).value;
+    fetch('/issue/dismiss/' + issueId + '/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'reason=' + reason
+    }).then(r => r.json()).then(data => {
+        if (data.status === 'dismissed') {
+            var row = document.getElementById('issue-row-' + issueId);
+            row.style.opacity = '0.45';
+            // Replace dismiss controls with restore button
+            var actionCell = row.querySelector('td:last-child');
+            actionCell.innerHTML = '<button onclick="undismissIssue(' + issueId + ')" style="font-size:11px; padding:3px 10px; border-radius:6px; border:1px solid #38a169; background:white; color:#38a169; cursor:pointer;">Restore</button>';
+        }
+    });
+}
+
+function undismissIssue(issueId) {
+    fetch('/issue/undismiss/' + issueId + '/', {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken}
+    }).then(r => r.json()).then(data => {
+        if (data.status === 'restored') {
+            location.reload();
+        }
+    });
+}
+
 function filterIssues(source) {
     var rows = document.querySelectorAll('.issue-row');
     rows.forEach(function(row) {
@@ -149,15 +222,16 @@ function filterIssues(source) {
         }
     });
     // Update tab styles
-    ['all', 'deterministic', 'llm'].forEach(function(t) {
+    ['all', 'deterministic', 'llm', 'enhanced'].forEach(function(t) {
         var btn = document.getElementById('tab-' + t);
+        if (!btn) return;
         if (t === source) {
             btn.style.background = '#6c63ff';
             btn.style.color = 'white';
             btn.style.borderColor = '#6c63ff';
         } else {
             btn.style.background = 'white';
-            btn.style.color = '#4a5568';
+            btn.style.color = t === 'enhanced' ? '#6c63ff' : '#4a5568';
             btn.style.borderColor = '#e2e8f0';
         }
     });

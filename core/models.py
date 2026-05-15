@@ -31,6 +31,9 @@ class Page(models.Model):
     html_snapshot = models.TextField()
     status = models.CharField(max_length=20, default="pending")
 
+    # Compliance score 0–100 (calculated after analysis)
+    compliance_score = models.IntegerField(default=100)
+
     # LLM enrichment fields
     llm_status = models.CharField(
         max_length=20, choices=LLM_STATUS_CHOICES, default="pending"
@@ -62,6 +65,11 @@ class Issue(models.Model):
         ("deterministic", "Deterministic"),
         ("llm",           "AI (LLM)"),
     ]
+    DISMISSAL_REASON_CHOICES = [
+        ("false_positive",  "False Positive"),
+        ("not_applicable",  "Not Applicable"),
+        ("accepted_risk",   "Accepted Risk"),
+    ]
 
     page = models.ForeignKey(Page, on_delete=models.CASCADE)
     rule = models.ForeignKey(Rule, on_delete=models.CASCADE)
@@ -74,6 +82,13 @@ class Issue(models.Model):
     source = models.CharField(
         max_length=20, choices=ISSUE_SOURCE_CHOICES, default="deterministic"
     )
+
+    # Dismissal
+    dismissed = models.BooleanField(default=False)
+    dismissal_reason = models.CharField(
+        max_length=20, choices=DISMISSAL_REASON_CHOICES, blank=True, null=True
+    )
+    dismissal_note = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return self.message

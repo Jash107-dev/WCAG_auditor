@@ -338,6 +338,13 @@
         <a href="/reporting/ada/{{ project.id }}/" class="btn-primary" style="width:100%; justify-content:center; margin-bottom:10px; display:flex;">View ADA Statement</a>
         <a href="/reporting/export/pdf/{{ project.id }}/" class="btn-outline" style="width:100%; text-align:center; display:block; margin-bottom:8px;">⬇ Download Report (PDF)</a>
         <a href="/export/csv/{{ project.id }}/" class="btn-outline" style="width:100%; text-align:center; display:block; margin-bottom:8px;">⬇ Export Issues (CSV)</a>
+        <!-- Re-scan -->
+        <form method="POST" action="/rescan/{{ project.id }}/" style="margin-bottom:8px;">
+            {% csrf_token %}
+            <button type="submit" class="btn-outline" style="width:100%; text-align:center; display:block; border-color:#38a169; color:#38a169;">
+                🔄 Re-scan Site
+            </button>
+        </form>
         <button id="llmBtn" onclick="triggerLLM({{ project.id }})" class="btn-outline"
             style="width:100%; text-align:center; display:block; border-color:#6c63ff; color:#6c63ff;">
             🤖 Run AI Analysis
