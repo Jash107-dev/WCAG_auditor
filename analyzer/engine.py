@@ -98,28 +98,39 @@ def _run_llm_enrichment(page: Page, saved_issues: list, client) -> None:
     """
     Enrich saved Issue objects with LLM-generated fix suggestions.
     Also runs semantic checks and readability analysis.
+    Enhanced fix calls run in parallel for speed.
     """
     from analyzer.llm import (
         enhance_issue_fix,
         run_semantic_checks,
         analyze_readability,
     )
+    from concurrent.futures import ThreadPoolExecutor, as_completed
 
     page.llm_status = "running"
     page.save(update_fields=["llm_status"])
 
     try:
-        # 1. Enhance fix suggestions for top N deterministic issues
+        # 1. Prepare top N deterministic issues for enrichment
         deterministic = [
             (obj, data) for obj, data in saved_issues
             if data.get("source", "deterministic") == "deterministic"
         ]
-        # Prioritise critical/serious first
         severity_order = {"critical": 0, "serious": 1, "moderate": 2, "minor": 3}
         deterministic.sort(key=lambda x: severity_order.get(x[0].severity, 9))
+        to_enrich = deterministic[:LLM_ENRICH_LIMIT]
 
-        for issue_obj, issue_data in deterministic[:LLM_ENRICH_LIMIT]:
-            enhanced = enhance_issue_fix(
+        # Parse HTML once — reused for semantic + readability
+        soup = BeautifulSoup(page.html_snapshot, "html.parser")
+        body = soup.find("body")
+        html_snippet = str(body)[:3000] if body else page.html_snapshot[:3000]
+        text_sample = soup.get_text(separator=" ", strip=True)
+        title_tag = soup.find("title")
+        page_title = title_tag.get_text(strip=True) if title_tag else ""
+
+        # --- Run all LLM calls in parallel ---
+        def call_enhance(issue_obj, issue_data):
+            return issue_obj, enhance_issue_fix(
                 client,
                 wcag_id=issue_obj.rule.wcag_id,
                 rule_title=issue_obj.rule.title,
@@ -127,26 +138,50 @@ def _run_llm_enrichment(page: Page, saved_issues: list, client) -> None:
                 basic_fix=issue_data["fix"],
                 element_snippet=issue_data.get("element", ""),
             )
-            if enhanced:
-                issue_obj.llm_analysis = enhanced
-                issue_obj.save(update_fields=["llm_analysis"])
 
-        # 2. Run LLM semantic checks on a trimmed HTML snippet
-        soup = BeautifulSoup(page.html_snapshot, "html.parser")
-        # Use body content only to keep prompt size manageable
-        body = soup.find("body")
-        html_snippet = str(body)[:3000] if body else page.html_snapshot[:3000]
+        def call_semantic():
+            return run_semantic_checks(client, html_snippet)
 
-        semantic_issues = run_semantic_checks(client, html_snippet)
-        if semantic_issues:
-            _save_issues(page, semantic_issues, source="llm")
+        def call_readability():
+            return analyze_readability(client, page_title, text_sample)
 
-        # 3. Readability analysis
-        text_sample = soup.get_text(separator=" ", strip=True)
-        title_tag = soup.find("title")
-        page_title = title_tag.get_text(strip=True) if title_tag else ""
+        results = {}
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            # Submit enhanced fix calls
+            fix_futures = {
+                executor.submit(call_enhance, obj, data): (obj, data)
+                for obj, data in to_enrich
+            }
+            # Submit semantic + readability in parallel with fixes
+            semantic_future = executor.submit(call_semantic)
+            readability_future = executor.submit(call_readability)
 
-        readability = analyze_readability(client, page_title, text_sample)
+            # Collect enhanced fix results
+            for future in as_completed(fix_futures):
+                try:
+                    issue_obj, enhanced = future.result()
+                    if enhanced:
+                        issue_obj.llm_analysis = enhanced
+                        issue_obj.save(update_fields=["llm_analysis"])
+                except Exception as e:
+                    logger.warning(f"Enhanced fix failed for an issue: {e}")
+
+            # Collect semantic results
+            try:
+                semantic_issues = semantic_future.result()
+                if semantic_issues:
+                    _save_issues(page, semantic_issues, source="llm")
+            except Exception as e:
+                logger.warning(f"Semantic check failed: {e}")
+                semantic_issues = []
+
+            # Collect readability results
+            try:
+                readability = readability_future.result()
+            except Exception as e:
+                logger.warning(f"Readability check failed: {e}")
+                readability = None
+
         if readability:
             page.readability_level = readability.get("level")
             page.readability_concern = readability.get("concern")
