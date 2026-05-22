@@ -179,8 +179,14 @@ def check_empty_links(soup):
     """Check for links with no accessible text (vague or empty)."""
     issues = []
     vague_texts = {'click here', 'here', 'read more', 'more', 'link', 'this', 'learn more'}
+
+    # CSS classes commonly used for decorative/functional icon links
+    # that get their label from CSS content — skip these
+    skip_classes = {'self-link', 'anchor', 'permalink', 'headerlink', 'pilcrow'}
+
     for a in soup.find_all('a'):
         href = a.get('href', '').strip()
+
         # Skip anchor-only or missing href
         if not href or href == '#':
             issues.append({
@@ -190,6 +196,11 @@ def check_empty_links(soup):
                 'fix': 'Provide a valid URL in the href attribute.',
                 'element': str(a)[:150]
             })
+            continue
+
+        # Skip known decorative/permalink link patterns (CSS-labelled)
+        link_classes = set(a.get('class', []))
+        if link_classes & skip_classes:
             continue
 
         # Gather all accessible text sources
@@ -233,11 +244,37 @@ def check_empty_links(soup):
 def check_empty_buttons(soup):
     """Check for buttons with no accessible label."""
     issues = []
+    # CSS classes that indicate icon-only buttons labelled via CSS content
+    icon_classes = {'with-icon', 'icon-only', 'btn-icon', 'icon-btn'}
+
     for btn in soup.find_all('button'):
         text = btn.get_text(strip=True)
         aria_label = btn.get('aria-label', '').strip()
         aria_labelledby = btn.get('aria-labelledby', '').strip()
-        if not text and not aria_label and not aria_labelledby:
+        title = btn.get('title', '').strip()
+
+        # Check for child img with alt text
+        child_img_alts = [
+            img.get('alt', '').strip()
+            for img in btn.find_all('img')
+            if img.get('alt', '').strip()
+        ]
+
+        # Check for data-label or data-title attributes (common pattern)
+        data_label = btn.get('data-label', '').strip() or btn.get('data-title', '').strip()
+
+        # Check if button uses icon CSS classes (CSS-generated content)
+        btn_classes = set(btn.get('class', []))
+        has_icon_class = any(
+            any(ic in cls for ic in ('icon', 'with-icon')) for cls in btn_classes
+        )
+
+        has_accessible_name = (
+            text or aria_label or aria_labelledby or title
+            or child_img_alts or data_label or has_icon_class
+        )
+
+        if not has_accessible_name:
             issues.append({
                 'wcag_id': '4.1.2',
                 'severity': 'serious',
