@@ -191,18 +191,35 @@ def check_empty_links(soup):
                 'element': str(a)[:150]
             })
             continue
-        # Check for vague link text
+
+        # Gather all accessible text sources
         link_text = a.get_text(strip=True).lower()
         aria_label = a.get('aria-label', '').strip()
-        if not link_text and not aria_label:
+        aria_labelledby = a.get('aria-labelledby', '').strip()
+        title = a.get('title', '').strip()
+
+        # Check for alt text on child images (e.g. logo links)
+        child_img_alts = [
+            img.get('alt', '').strip()
+            for img in a.find_all('img')
+            if img.get('alt', '').strip()
+        ]
+        has_img_alt = len(child_img_alts) > 0
+
+        # Link is accessible if any of these provide a label
+        has_accessible_name = (
+            link_text or aria_label or aria_labelledby or title or has_img_alt
+        )
+
+        if not has_accessible_name:
             issues.append({
                 'wcag_id': '2.4.4',
                 'severity': 'serious',
                 'message': 'Link has no accessible text.',
-                'fix': 'Add descriptive text content or an aria-label to the link.',
+                'fix': 'Add descriptive text content, an aria-label, or an img with alt text inside the link.',
                 'element': str(a)[:150]
             })
-        elif link_text in vague_texts and not aria_label:
+        elif link_text in vague_texts and not aria_label and not has_img_alt:
             issues.append({
                 'wcag_id': '2.4.4',
                 'severity': 'minor',
@@ -479,19 +496,29 @@ def check_focus_indicators(soup):
 def check_skip_navigation(soup):
     """
     WCAG 2.4.1 — A skip navigation link should be present on pages with repeated nav.
-    Checks for a "skip to main content" link as the first focusable element.
+    Handles both visible and visually-hidden skip links (common CSS pattern).
     """
     issues = []
     # Only flag if there's a nav element (repeated navigation present)
     if not soup.find('nav'):
         return issues
 
-    first_links = soup.find_all('a', limit=5)
+    # Search all links in the page (not just first 5) for skip patterns
+    # Visually-hidden skip links are still valid — check href and text
     has_skip = False
-    for link in first_links:
-        text = link.get_text(strip=True).lower()
+    skip_keywords = ('skip', 'jump', 'bypass', 'main content', 'main-content')
+
+    for link in soup.find_all('a', href=True):
         href = link.get('href', '')
-        if ('skip' in text or 'jump' in text) and href.startswith('#'):
+        text = link.get_text(strip=True).lower()
+        aria = link.get('aria-label', '').lower()
+
+        # Must link to an anchor (#something) to be a skip link
+        if not href.startswith('#'):
+            continue
+
+        combined = text + ' ' + aria
+        if any(kw in combined for kw in skip_keywords):
             has_skip = True
             break
 
