@@ -146,14 +146,19 @@ def _run_llm_enrichment(page: Page, saved_issues: list, client) -> None:
             return analyze_readability(client, page_title, text_sample)
 
         results = {}
-        with ThreadPoolExecutor(max_workers=8) as executor:
-            # Submit enhanced fix calls
-            fix_futures = {
-                executor.submit(call_enhance, obj, data): (obj, data)
-                for obj, data in to_enrich
-            }
-            # Submit semantic + readability in parallel with fixes
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            # Submit enhanced fix calls with small stagger to avoid rate limits
+            import time
+            fix_futures = {}
+            for i, (obj, data) in enumerate(to_enrich):
+                if i > 0:
+                    time.sleep(0.5)  # 500ms stagger between fix calls
+                fix_futures[executor.submit(call_enhance, obj, data)] = (obj, data)
+
+            # Submit semantic + readability after a short delay
+            time.sleep(0.5)
             semantic_future = executor.submit(call_semantic)
+            time.sleep(0.5)
             readability_future = executor.submit(call_readability)
 
             # Collect enhanced fix results

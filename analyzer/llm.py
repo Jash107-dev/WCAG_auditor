@@ -90,35 +90,43 @@ class GroqClient:
         self.model = model or self.DEFAULT_MODEL
 
     def complete(self, prompt: str) -> str | None:
-        try:
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            }
-            payload = {
-                "model": self.model,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "You are a web accessibility expert. Be concise and practical.",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                "temperature": 0.3,
-                "max_tokens": 350,
-            }
-            resp = requests.post(
-                self.API_URL,
-                headers=headers,
-                json=payload,
-                timeout=30,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"].strip()
-        except Exception as e:
-            logger.error(f"Groq request failed: {e}")
-            return None
+        import time
+        for attempt in range(3):
+            try:
+                headers = {
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                }
+                payload = {
+                    "model": self.model,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "You are a web accessibility expert. Be concise and practical.",
+                        },
+                        {"role": "user", "content": prompt},
+                    ],
+                    "temperature": 0.3,
+                    "max_tokens": 350,
+                }
+                resp = requests.post(
+                    self.API_URL,
+                    headers=headers,
+                    json=payload,
+                    timeout=30,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                return data["choices"][0]["message"]["content"].strip()
+            except Exception as e:
+                if "429" in str(e) and attempt < 2:
+                    wait = (attempt + 1) * 5  # 5s, 10s
+                    logger.warning(f"Groq rate limit hit, retrying in {wait}s...")
+                    time.sleep(wait)
+                else:
+                    logger.error(f"Groq request failed: {e}")
+                    return None
+        return None
 
 
 # ---------------------------------------------------------------------------
