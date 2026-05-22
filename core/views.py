@@ -90,17 +90,26 @@ def dashboard(request, project_id):
     all_issues = Issue.objects.filter(page__project=proj)
     total_issues = all_issues.count()
 
-    # A page is compliant only if it has no critical or serious issues
-    non_compliant_page_ids = set(
-        all_issues.filter(severity__in=["critical", "serious"])
+    # Compliance tiers:
+    # Compliant   = no critical issues
+    # Partial     = no critical but has serious/moderate/minor
+    # Non-Compliant = has at least one critical issue
+    critical_page_ids = set(
+        all_issues.filter(severity="critical")
         .values_list("page_id", flat=True).distinct()
     )
-    non_compliant_pages = len(non_compliant_page_ids)
-    compliant_pages = max(0, total_pages - non_compliant_pages)
+    any_issue_page_ids = set(
+        all_issues.values_list("page_id", flat=True).distinct()
+    )
+
+    non_compliant_pages = len(critical_page_ids)
+    partial_pages = len(any_issue_page_ids - critical_page_ids)
+    compliant_pages = total_pages - non_compliant_pages - partial_pages
+    compliant_pages = max(0, compliant_pages)
     pages_with_issues = all_pages.filter(status="fail").count()
+
     if total_pages > 0:
         percent_compliant = round((compliant_pages / total_pages) * 100, 2)
-        partial_pages = total_pages - compliant_pages - non_compliant_pages
         partial_percent = round((partial_pages / total_pages) * 100, 2)
         non_compliant_percent = round((non_compliant_pages / total_pages) * 100, 2)
     else:

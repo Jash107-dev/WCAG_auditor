@@ -26,7 +26,7 @@
             {% elif page.llm_status == "running" %}
                 <span style="background:#fef3c7; color:#d69e2e; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600;">⏳ AI Running…</span>
             {% elif page.llm_status == "skipped" %}
-                <span style="background:#f0f2f5; color:#8892b0; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600;">⚙️ AI Unavailable</span>
+                <span style="background:#f0f2f5; color:#8892b0; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600;">⚙️ Standard Scan</span>
             {% elif page.llm_status == "error" %}
                 <span style="background:#fff0f0; color:#e53e3e; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600;">⚠️ AI Error</span>
             {% endif %}
@@ -114,14 +114,12 @@
                 <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600; width:60px;">Source</th>
                 <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Issue</th>
                 <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Fix</th>
-                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600; width:100px;">Action</th>
             </tr>
         </thead>
         <tbody>
             {% for issue in issues %}
-            <tr class="issue-row issue-source-{{ issue.source }}{% if issue.llm_analysis %} issue-source-enhanced{% endif %}{% if issue.dismissed %} issue-dismissed{% endif %}"
-                id="issue-row-{{ issue.id }}"
-                style="border-bottom:1px solid #f0f2f5; vertical-align:top;{% if issue.dismissed %} opacity:0.45;{% endif %}">
+            <tr class="issue-row issue-source-{{ issue.source }}{% if issue.llm_analysis %} issue-source-enhanced{% endif %}"
+                style="border-bottom:1px solid #f0f2f5; vertical-align:top;">
                 <td style="padding:10px; font-weight:700; color:#6c63ff;">{{ issue.rule.wcag_id }}</td>
                 <td style="padding:10px;">
                     <span class="severity-{{ issue.severity }}">{{ issue.severity|capfirst }}</span>
@@ -131,11 +129,6 @@
                         <span style="background:#ede9fe; color:#6c63ff; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600;">🤖 AI</span>
                     {% else %}
                         <span style="background:#f0f2f5; color:#8892b0; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600;">Rule</span>
-                    {% endif %}
-                    {% if issue.dismissed %}
-                        <br><span style="background:#fef3c7; color:#b7791f; padding:2px 6px; border-radius:8px; font-size:10px; font-weight:600; margin-top:3px; display:inline-block;">
-                            {{ issue.get_dismissal_reason_display }}
-                        </span>
                     {% endif %}
                 </td>
                 <td style="padding:10px; color:#4a5568; line-height:1.5;">{{ issue.message }}</td>
@@ -147,26 +140,6 @@
                     </div>
                     {% else %}
                     <div style="font-size:12px; color:#8892b0; line-height:1.5;">{{ issue.fix }}</div>
-                    {% endif %}
-                </td>
-                <td style="padding:10px; white-space:nowrap;">
-                    {% if not issue.dismissed %}
-                    <div style="display:flex; flex-direction:column; gap:4px;">
-                        <select id="reason-{{ issue.id }}" style="font-size:11px; padding:3px 6px; border:1px solid #e2e8f0; border-radius:6px; color:#4a5568; background:white;">
-                            <option value="false_positive">False Positive</option>
-                            <option value="not_applicable">Not Applicable</option>
-                            <option value="accepted_risk">Accepted Risk</option>
-                        </select>
-                        <button onclick="dismissIssue({{ issue.id }})"
-                            style="font-size:11px; padding:3px 10px; border-radius:6px; border:1px solid #e2e8f0; background:white; color:#8892b0; cursor:pointer;">
-                            Dismiss
-                        </button>
-                    </div>
-                    {% else %}
-                    <button onclick="undismissIssue({{ issue.id }})"
-                        style="font-size:11px; padding:3px 10px; border-radius:6px; border:1px solid #38a169; background:white; color:#38a169; cursor:pointer;">
-                        Restore
-                    </button>
                     {% endif %}
                 </td>
             </tr>
@@ -182,36 +155,6 @@
 </div>
 
 <script>
-var csrfToken = '{{ csrf_token }}';
-
-function dismissIssue(issueId) {
-    var reason = document.getElementById('reason-' + issueId).value;
-    fetch('/issue/dismiss/' + issueId + '/', {
-        method: 'POST',
-        headers: {'X-CSRFToken': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded'},
-        body: 'reason=' + reason
-    }).then(r => r.json()).then(data => {
-        if (data.status === 'dismissed') {
-            var row = document.getElementById('issue-row-' + issueId);
-            row.style.opacity = '0.45';
-            // Replace dismiss controls with restore button
-            var actionCell = row.querySelector('td:last-child');
-            actionCell.innerHTML = '<button onclick="undismissIssue(' + issueId + ')" style="font-size:11px; padding:3px 10px; border-radius:6px; border:1px solid #38a169; background:white; color:#38a169; cursor:pointer;">Restore</button>';
-        }
-    });
-}
-
-function undismissIssue(issueId) {
-    fetch('/issue/undismiss/' + issueId + '/', {
-        method: 'POST',
-        headers: {'X-CSRFToken': csrfToken}
-    }).then(r => r.json()).then(data => {
-        if (data.status === 'restored') {
-            location.reload();
-        }
-    });
-}
-
 function filterIssues(source) {
     var rows = document.querySelectorAll('.issue-row');
     rows.forEach(function(row) {
@@ -221,7 +164,6 @@ function filterIssues(source) {
             row.style.display = row.classList.contains('issue-source-' + source) ? '' : 'none';
         }
     });
-    // Update tab styles
     ['all', 'deterministic', 'llm', 'enhanced'].forEach(function(t) {
         var btn = document.getElementById('tab-' + t);
         if (!btn) return;
