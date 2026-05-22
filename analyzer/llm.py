@@ -97,7 +97,6 @@ class GroqClient:
                 data = resp.json()
                 return data["choices"][0]["message"]["content"].strip()
             except Exception as e:
-            except Exception as e:
                 if "429" in str(e) and attempt < 2:
                     # Try to extract retry-after from response headers
                     wait = (attempt + 1) * 5  # 5s, 10s
