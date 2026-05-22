@@ -87,11 +87,17 @@ def dashboard(request, project_id):
     proj = Project.objects.get(id=project_id)
     all_pages = proj.page_set.all()
     total_pages = all_pages.count()
-    compliant_pages = all_pages.filter(status="pass").count()
-    pages_with_issues = all_pages.filter(status="fail").count()
-    non_compliant_pages = all_pages.filter(status="fail").count()
     all_issues = Issue.objects.filter(page__project=proj)
     total_issues = all_issues.count()
+
+    # A page is compliant only if it has no critical or serious issues
+    non_compliant_page_ids = set(
+        all_issues.filter(severity__in=["critical", "serious"])
+        .values_list("page_id", flat=True).distinct()
+    )
+    non_compliant_pages = len(non_compliant_page_ids)
+    compliant_pages = max(0, total_pages - non_compliant_pages)
+    pages_with_issues = all_pages.filter(status="fail").count()
     if total_pages > 0:
         percent_compliant = round((compliant_pages / total_pages) * 100, 2)
         partial_pages = total_pages - compliant_pages - non_compliant_pages

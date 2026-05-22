@@ -152,10 +152,16 @@ def _run_llm_enrichment(page: Page, saved_issues: list, client) -> None:
             page.readability_concern = readability.get("concern")
             page.readability_improvement = readability.get("improvement")
 
+        # Recalculate score and status after LLM adds issues
+        all_issues = list(page.issue_set.all())
+        page.compliance_score = calculate_compliance_score(all_issues)
+        page.status = "fail" if all_issues else "pass"
+
         page.llm_status = "done"
         page.save(update_fields=[
             "llm_status", "readability_level",
             "readability_concern", "readability_improvement",
+            "compliance_score", "status",
         ])
         logger.info(f"LLM enrichment complete for page {page.id}")
 

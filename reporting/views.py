@@ -45,19 +45,24 @@ def ada_statement(request, project_id):
     all_pages = proj.page_set.all()
 
     total_pages = all_pages.count()
-    compliant_pages = all_pages.filter(status="pass").count()
     all_issues = Issue.objects.filter(page__project=proj)
     total_issues = all_issues.count()
+
+    # A page is compliant only if it has NO critical or serious issues
+    # (moderate/minor issues are noted but don't fail compliance)
+    non_compliant_page_ids = all_issues.filter(
+        severity__in=["critical", "serious"]
+    ).values_list("page_id", flat=True).distinct()
+
+    compliant_pages = total_pages - len(set(non_compliant_page_ids))
+    compliant_pages = max(0, compliant_pages)
 
     if total_pages > 0:
         percent = round((compliant_pages / total_pages) * 100, 2)
     else:
         percent = 0
 
-    if percent >= 80:
-        is_compliant = True
-    else:
-        is_compliant = False
+    is_compliant = percent >= 80
 
     return render(request, "reporting/ada_statement.html", {
         "project": proj,
