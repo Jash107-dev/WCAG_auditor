@@ -19,56 +19,34 @@ logger = logging.getLogger(__name__)
 # Prompt templates
 # ---------------------------------------------------------------------------
 
-PROMPT_ENHANCED_FIX = """You are a web accessibility expert specializing in WCAG 2.1 compliance.
+PROMPT_ENHANCED_FIX = """You are a WCAG accessibility expert.
 
-A deterministic accessibility checker found the following issue on a webpage:
-
-Rule: {wcag_id} — {rule_title}
-Issue: {message}
+Issue found: {wcag_id} — {rule_title}
+Message: {message}
 Basic fix: {basic_fix}
-HTML element: {element_snippet}
+Element: {element_snippet}
 
-Provide a concise, developer-friendly explanation with:
-1. Why this matters for users with disabilities (1-2 sentences)
-2. A specific, actionable code fix with a short example
-3. Any edge cases to watch for
-
-Keep the total response under 150 words. Be direct and practical.
+Give a concise developer fix (under 100 words):
+1. Why it matters for disabled users (1 sentence)
+2. Code fix example
 """
 
-PROMPT_SEMANTIC_ANALYSIS = """You are a web accessibility expert. Analyze the following HTML snippet for semantic accessibility issues that automated tools often miss:
+PROMPT_SEMANTIC_ANALYSIS = """Analyze this HTML for accessibility issues automated tools miss:
 
-HTML:
 {html_snippet}
 
-Check for:
-- Incorrect or missing ARIA roles/attributes
-- Landmark region issues (missing main, nav, header, footer)
-- Reading order problems
-- Content that relies solely on visual presentation
-- Keyboard navigation issues visible in markup
-
-List only real issues found. For each issue state:
-- WCAG criterion (e.g. 1.3.1)
-- Severity: critical / serious / moderate / minor
-- What the issue is (1 sentence)
-- How to fix it (1 sentence)
-
-If no issues found, respond with: NO_ISSUES
-Format each issue as: ISSUE|wcag_id|severity|description|fix
+Check: ARIA roles, landmark regions, keyboard navigation, reading order.
+Only list real issues found.
+Format: ISSUE|wcag_id|severity|description|fix
+If none: NO_ISSUES
 """
 
-PROMPT_READABILITY = """You are a web accessibility expert. Evaluate the readability and content clarity of the following page text for users with cognitive disabilities (WCAG 3.1.5):
+PROMPT_READABILITY = """Rate readability for cognitive accessibility (WCAG 3.1.5):
 
-Page title: {page_title}
-Sample text (first 500 chars): {text_sample}
+Title: {page_title}
+Text: {text_sample}
 
-Assess:
-1. Reading level (Simple / Moderate / Complex)
-2. One specific readability concern if any
-3. One actionable improvement
-
-Keep response under 80 words. Format:
+Format (under 50 words):
 LEVEL: <Simple|Moderate|Complex>
 CONCERN: <concern or NONE>
 IMPROVEMENT: <suggestion or NONE>
@@ -102,12 +80,12 @@ class GroqClient:
                     "messages": [
                         {
                             "role": "system",
-                            "content": "You are a web accessibility expert. Be concise and practical.",
+                            "content": "You are a WCAG accessibility expert. Be very concise.",
                         },
                         {"role": "user", "content": prompt},
                     ],
                     "temperature": 0.3,
-                    "max_tokens": 350,
+                    "max_tokens": 200,
                 }
                 resp = requests.post(
                     self.API_URL,
@@ -119,9 +97,18 @@ class GroqClient:
                 data = resp.json()
                 return data["choices"][0]["message"]["content"].strip()
             except Exception as e:
+            except Exception as e:
                 if "429" in str(e) and attempt < 2:
+                    # Try to extract retry-after from response headers
                     wait = (attempt + 1) * 5  # 5s, 10s
-                    logger.warning(f"Groq rate limit hit, retrying in {wait}s...")
+                    try:
+                        import re
+                        match = re.search(r'try again in (\d+\.?\d*)s', str(e), re.I)
+                        if match:
+                            wait = float(match.group(1)) + 1
+                    except Exception:
+                        pass
+                    logger.warning(f"Groq rate limit hit, retrying in {wait:.0f}s...")
                     time.sleep(wait)
                 else:
                     logger.error(f"Groq request failed: {e}")
@@ -244,7 +231,7 @@ def analyze_readability(client: LLMClient, page_title: str, text_sample: str) ->
 
     prompt = PROMPT_READABILITY.format(
         page_title=page_title or "Unknown",
-        text_sample=text_sample[:500],
+        text_sample=text_sample[:200],
     )
     response = client.complete(prompt)
     if not response:

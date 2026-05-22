@@ -134,7 +134,7 @@ def _run_llm_enrichment(page: Page, saved_issues: list, client) -> None:
         # 2. Run LLM semantic checks
         soup = BeautifulSoup(page.html_snapshot, "html.parser")
         body = soup.find("body")
-        html_snippet = str(body)[:3000] if body else page.html_snapshot[:3000]
+        html_snippet = str(body)[:1500] if body else page.html_snapshot[:1500]
 
         semantic_issues = run_semantic_checks(client, html_snippet)
         if semantic_issues:
