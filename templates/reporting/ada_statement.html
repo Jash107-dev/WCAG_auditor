@@ -12,7 +12,7 @@
         </div>
     </div>
 
-    {% if is_compliant %}
+    {% if is_compliant and total_issues == 0 %}
     <div style="background:#d1fae5; border-left:4px solid #38a169; padding:16px 20px; border-radius:8px; margin-bottom:20px;">
         <p style="font-size:15px; font-weight:700; color:#38a169; margin-bottom:6px;">✅ COMPLIANT</p>
         <p style="font-size:14px; color:#276749; line-height:1.6;">
@@ -20,12 +20,20 @@
             The website has been evaluated and meets the required accessibility standards.
         </p>
     </div>
+    {% elif is_compliant and total_issues > 0 %}
+    <div style="background:#fef9c3; border-left:4px solid #ca8a04; padding:16px 20px; border-radius:8px; margin-bottom:20px;">
+        <p style="font-size:15px; font-weight:700; color:#ca8a04; margin-bottom:6px;">⚠️ COMPLIANT WITH IMPROVEMENTS NEEDED</p>
+        <p style="font-size:14px; color:#713f12; line-height:1.6;">
+            This site meets the minimum ADA accessibility threshold (no critical blocking issues) based on WCAG <strong>{{ project.wcag_level }}</strong> checks.
+            However, <strong>{{ total_issues }} accessibility issues</strong> were found that should be addressed to improve the experience for users with disabilities.
+        </p>
+    </div>
     {% else %}
-    <div style="background:#fef3c7; border-left:4px solid #d69e2e; padding:16px 20px; border-radius:8px; margin-bottom:20px;">
-        <p style="font-size:15px; font-weight:700; color:#d69e2e; margin-bottom:6px;">⚠️ PARTIALLY COMPLIANT</p>
-        <p style="font-size:14px; color:#744210; line-height:1.6;">
-            This site is <strong>PARTIALLY</strong> aligned with ADA accessibility expectations based on WCAG <strong>{{ project.wcag_level }}</strong> checks.
-            Accessibility issues were found that need to be addressed to achieve full compliance.
+    <div style="background:#fee2e2; border-left:4px solid #e53e3e; padding:16px 20px; border-radius:8px; margin-bottom:20px;">
+        <p style="font-size:15px; font-weight:700; color:#e53e3e; margin-bottom:6px;">❌ NON-COMPLIANT</p>
+        <p style="font-size:14px; color:#7f1d1d; line-height:1.6;">
+            This site does <strong>NOT</strong> meet ADA accessibility expectations based on WCAG <strong>{{ project.wcag_level }}</strong> checks.
+            Critical accessibility issues were found that prevent users with disabilities from accessing content.
         </p>
     </div>
     {% endif %}
