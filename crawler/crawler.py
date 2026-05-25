@@ -5,12 +5,10 @@ from core.models import Page, Project
 from analyzer.engine import analyze_page
 from crawler.fetcher import fetch_page
 
-# Scan scope constants
-SCOPE_SINGLE   = "single"    # Only the entered URL
-SCOPE_MAIN     = "main"      # Homepage + top-level nav links only
-SCOPE_FULL     = "full"      # All internal pages (no limit)
+SCOPE_SINGLE   = "single"
+SCOPE_MAIN     = "main"
+SCOPE_FULL     = "full"
 
-# Hard cap to prevent runaway crawls on huge sites (can be raised)
 MAX_PAGES_HARD_CAP = 500
 
 
@@ -24,7 +22,6 @@ def normalize_url(base_url, link):
 
 
 def is_internal_url(url, domain):
-    """Check if a URL belongs to the same domain."""
     parsed = urlparse(url)
     url_domain = parsed.netloc.replace('www.', '')
     base_domain = domain.replace('www.', '')
@@ -32,20 +29,14 @@ def is_internal_url(url, domain):
 
 
 def is_navigational_link(href):
-    """Skip non-page links."""
     skip_prefixes = ('#', 'javascript:', 'mailto:', 'tel:', 'ftp:', 'data:')
     return not any(href.startswith(p) for p in skip_prefixes)
 
 
 def get_main_links(start_url, html, domain):
-    """
-    Extract top-level navigation links from the homepage.
-    Used for SCOPE_MAIN — grabs links from nav, header, and top-level <a> tags.
-    """
     soup = BeautifulSoup(html, 'html.parser')
     links = set()
 
-    # Priority: nav elements, header links
     for container in soup.find_all(['nav', 'header']):
         for a in container.find_all('a', href=True):
             href = a['href'].strip()
@@ -55,7 +46,6 @@ def get_main_links(start_url, html, domain):
             if is_internal_url(normalized, domain):
                 links.add(normalized)
 
-    # If nav found nothing, fall back to all top-level links
     if not links:
         for a in soup.find_all('a', href=True):
             href = a['href'].strip()
@@ -69,13 +59,6 @@ def get_main_links(start_url, html, domain):
 
 
 def crawl(start_url, project_id=None, scope=SCOPE_FULL, use_llm=False):
-    """
-    Crawl a website based on scope:
-      - single : only the given URL
-      - main   : homepage + top-level nav links
-      - full   : all internal pages (up to MAX_PAGES_HARD_CAP)
-    """
-    # Auto-prepend https:// if missing
     if not start_url.startswith(('http://', 'https://')):
         start_url = 'https://' + start_url
 
@@ -98,12 +81,10 @@ def crawl(start_url, project_id=None, scope=SCOPE_FULL, use_llm=False):
 
     visited = set()
 
-    # --- Build the URL queue based on scope ---
     if scope == SCOPE_SINGLE:
         queue = [start_url]
 
     elif scope == SCOPE_MAIN:
-        # Fetch homepage first to extract nav links
         try:
             homepage_html, _ = fetch_page(start_url)
         except Exception as e:
@@ -115,14 +96,13 @@ def crawl(start_url, project_id=None, scope=SCOPE_FULL, use_llm=False):
         queue = [start_url] + [l for l in main_links if l != start_url]
         print(f"Main scope: found {len(queue)} links from navigation")
 
-    else:  # SCOPE_FULL
+    else:
         queue = [start_url]
 
     queued = set(queue)
     proj.total_pages = len(queue) if scope != SCOPE_FULL else MAX_PAGES_HARD_CAP
     proj.save()
 
-    # --- Crawl loop ---
     while queue:
         if scope == SCOPE_FULL and len(visited) >= MAX_PAGES_HARD_CAP:
             print(f"Reached hard cap of {MAX_PAGES_HARD_CAP} pages")
@@ -130,7 +110,6 @@ def crawl(start_url, project_id=None, scope=SCOPE_FULL, use_llm=False):
         if scope in (SCOPE_SINGLE, SCOPE_MAIN) and len(visited) >= len(queued):
             break
 
-        # Check stop flag (re-fetch from DB each iteration)
         proj.refresh_from_db()
         if proj.stop_requested:
             print(f"Stop requested — halting crawl after {len(visited)} pages")
@@ -156,13 +135,11 @@ def crawl(start_url, project_id=None, scope=SCOPE_FULL, use_llm=False):
             html, fetch_method = fetch_page(url)
             print(f"  Fetched via {fetch_method} ({len(html)} chars)")
 
-            # Save or update page
             pg, created = Page.objects.update_or_create(
                 project=proj, url=url,
                 defaults={"html_snapshot": html, "status": "pending", "llm_status": "pending"}
             )
 
-            # Run deterministic analysis + optionally LLM
             try:
                 analyze_page(pg.id, use_llm=use_llm)
             except Exception as e:
@@ -170,7 +147,6 @@ def crawl(start_url, project_id=None, scope=SCOPE_FULL, use_llm=False):
                 pg.status = "error"
                 pg.save()
 
-            # Discover new links (only for full scope)
             if scope == SCOPE_FULL:
                 soup = BeautifulSoup(html, "html.parser")
                 added = 0

@@ -11,12 +11,9 @@ import html as html_module
 
 
 def safe_para(text, style, max_len=None):
-    """Escape HTML special chars so ReportLab's XML parser never chokes."""
     if max_len:
         text = text[:max_len]
-    # Strip newlines for table cells
     text = text.replace('\n', ' ').replace('\r', '')
-    # Escape <, >, & so unclosed tags don't crash the parser
     text = html_module.escape(text)
     return Paragraph(text, style)
 
@@ -24,12 +21,10 @@ def safe_para(text, style, max_len=None):
 def page_report(request, page_id):
     pg = Page.objects.get(id=page_id)
     pg_issues = Issue.objects.filter(page=pg).select_related("rule").order_by(
-        # critical first, then by source (deterministic before llm)
         "source", "severity"
     )
     deterministic_count = pg_issues.filter(source="deterministic").count()
     llm_count = pg_issues.filter(source="llm").count()
-    # Issues that were AI-enhanced (have llm_analysis) but are deterministic source
     ai_enhanced_count = pg_issues.filter(source="deterministic").exclude(llm_analysis__isnull=True).exclude(llm_analysis="").count()
     return render(request, "reporting/page_report.html", {
         "page": pg,
@@ -48,8 +43,6 @@ def ada_statement(request, project_id):
     all_issues = Issue.objects.filter(page__project=proj)
     total_issues = all_issues.count()
 
-    # A page is compliant only if it has NO critical issues
-    # Serious/moderate/minor = partial compliance
     critical_page_ids = set(
         all_issues.filter(severity="critical")
         .values_list("page_id", flat=True).distinct()

@@ -18,16 +18,14 @@ def home(request):
         url = request.POST.get("url", "").strip()
         level = request.POST.get("wcag_level", "AA")
         scope = request.POST.get("scan_scope", "full")
-        scan_mode = request.POST.get("scan_mode", "standard")  # standard | ai
+        scan_mode = request.POST.get("scan_mode", "standard")
 
-        # Auto-prepend https:// if missing
         if url and not url.startswith(('http://', 'https://')):
             url = 'https://' + url
 
         use_llm = (scan_mode == "ai")
         new_project = Project.objects.create(domain=url, wcag_level=level, status="pending")
 
-        # Try Celery first, fall back to thread if Redis not available
         dispatched = _dispatch_crawl(url, new_project.id, scope, use_llm)
         if not dispatched:
             thread = threading.Thread(
@@ -42,10 +40,6 @@ def home(request):
 
 
 def _dispatch_crawl(url, project_id, scope, use_llm):
-    """
-    Try to dispatch crawl via Celery. Returns True if successful, False if
-    Redis/Celery unavailable (caller should fall back to threading).
-    """
     try:
         from crawler.tasks import crawl_website_task
         crawl_website_task.delay(url, project_id, scope, use_llm)
@@ -72,7 +66,6 @@ def crawl_status(request, project_id):
 
 
 def stop_crawl(request, project_id):
-    """POST — sets stop_requested flag so the crawler halts after current page."""
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
     try:
@@ -90,10 +83,6 @@ def dashboard(request, project_id):
     all_issues = Issue.objects.filter(page__project=proj)
     total_issues = all_issues.count()
 
-    # Compliance tiers:
-    # Compliant   = no critical issues
-    # Partial     = no critical but has serious/moderate/minor
-    # Non-Compliant = has at least one critical issue
     critical_page_ids = set(
         all_issues.filter(severity="critical")
         .values_list("page_id", flat=True).distinct()
@@ -184,7 +173,6 @@ def rules_list(request):
     return render(request, "core/rules.html", {"rules": all_rules})
 
 def reports_list(request):
-    # Show all projects that have at least started crawling, annotate with issue count
     done_projects = Project.objects.exclude(status="pending").annotate(
         issue_count=Count("page__issue")
     ).order_by("-created_at")
@@ -192,7 +180,6 @@ def reports_list(request):
 
 
 def export_csv(request, project_id):
-    """Export all issues for a project as a CSV file."""
     proj = Project.objects.get(id=project_id)
     all_issues = Issue.objects.filter(page__project=proj).select_related("rule", "page")
 
@@ -226,7 +213,6 @@ def settings_page(request):
 
 
 def llm_status_api(request):
-    """JSON endpoint — returns current LLM provider status + optional project progress."""
     from analyzer.llm import get_llm_client
     client = get_llm_client()
 
@@ -235,7 +221,6 @@ def llm_status_api(request):
         "provider": client.provider,
     }
 
-    # If project_id passed, include per-project LLM progress
     project_id = request.GET.get("project_id")
     if project_id:
         try:
@@ -264,16 +249,10 @@ def llm_status_api(request):
 
 
 def trigger_llm_analysis(request, project_id):
-    """
-    POST — runs LLM-only enrichment on already-crawled pages.
-    Does NOT re-crawl or re-run deterministic checks.
-    Only adds AI enhanced fixes, semantic checks, and readability.
-    """
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
 
     proj = Project.objects.get(id=project_id)
-    # Reset stop flag before starting
     proj.llm_stop_requested = False
     proj.save(update_fields=["llm_stop_requested"])
 
@@ -292,14 +271,12 @@ def trigger_llm_analysis(request, project_id):
             logger.info(f"LLM enrichment starting for {len(pages)} pages")
 
             for page in pages:
-                # Check stop flag before each page
                 proj.refresh_from_db()
                 if proj.llm_stop_requested:
                     logger.info(f"LLM stop requested — halted after processing some pages")
                     break
 
                 try:
-                    # Build saved_issues from existing DB issues (no re-analysis)
                     existing_issues = list(
                         page.issue_set.filter(source="deterministic").select_related("rule")
                     )
@@ -333,7 +310,6 @@ def trigger_llm_analysis(request, project_id):
 
 
 def stop_llm_analysis(request, project_id):
-    """POST — sets llm_stop_requested flag to halt AI analysis after current page."""
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
     try:
@@ -346,7 +322,6 @@ def stop_llm_analysis(request, project_id):
 
 
 def rescan_project(request, project_id):
-    """POST — re-crawl and re-analyse an existing project from scratch."""
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
     try:
@@ -357,7 +332,6 @@ def rescan_project(request, project_id):
     scan_mode = request.POST.get("scan_mode", "standard")
     use_llm = (scan_mode == "ai")
 
-    # Reset project state
     proj.status = "pending"
     proj.pages_crawled = 0
     proj.total_pages = 0
@@ -366,7 +340,6 @@ def rescan_project(request, project_id):
     proj.current_page = ""
     proj.save()
 
-    # Delete old pages and issues
     proj.page_set.all().delete()
 
     dispatched = _dispatch_crawl(proj.domain, proj.id, "full", use_llm)
@@ -382,7 +355,6 @@ def rescan_project(request, project_id):
 
 
 def dismiss_issue(request, issue_id):
-    """POST — dismiss an issue as false positive / not applicable / accepted risk."""
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
     try:
@@ -399,7 +371,6 @@ def dismiss_issue(request, issue_id):
 
 
 def undismiss_issue(request, issue_id):
-    """POST — restore a dismissed issue."""
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
     try:

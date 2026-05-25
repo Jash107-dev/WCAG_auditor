@@ -10,7 +10,6 @@ class Project(models.Model):
     pages_crawled = models.IntegerField(default=0)
     total_pages = models.IntegerField(default=0)
     stop_requested = models.BooleanField(default=False)
-    # AI analysis stop flag — set to True to halt LLM enrichment mid-run
     llm_stop_requested = models.BooleanField(default=False)
 
     def __str__(self):
@@ -30,11 +29,7 @@ class Page(models.Model):
     url = models.URLField(max_length=2000)
     html_snapshot = models.TextField()
     status = models.CharField(max_length=20, default="pending")
-
-    # Compliance score 0–100 (calculated after analysis)
     compliance_score = models.IntegerField(default=100)
-
-    # LLM enrichment fields
     llm_status = models.CharField(
         max_length=20, choices=LLM_STATUS_CHOICES, default="pending"
     )
@@ -76,14 +71,10 @@ class Issue(models.Model):
     severity = models.CharField(max_length=20)
     message = models.TextField()
     fix = models.TextField()
-
-    # LLM enrichment
     llm_analysis = models.TextField(blank=True, null=True)
     source = models.CharField(
         max_length=20, choices=ISSUE_SOURCE_CHOICES, default="deterministic"
     )
-
-    # Dismissal
     dismissed = models.BooleanField(default=False)
     dismissal_reason = models.CharField(
         max_length=20, choices=DISMISSAL_REASON_CHOICES, blank=True, null=True

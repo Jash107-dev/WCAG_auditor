@@ -1,23 +1,9 @@
-"""
-LLM integration layer for WCAG Auditor — Phase 4.
-
-Provider: Groq API (LLaMA 3.1 8B Instant)
-- Fast (~1s per request)
-- Free tier: 14,400 requests/day
-- No local installation required
-- API key configured in settings.py → GROQ_API_KEY
-"""
-
 import requests
 import logging
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-
-# ---------------------------------------------------------------------------
-# Prompt templates
-# ---------------------------------------------------------------------------
 
 PROMPT_ENHANCED_FIX = """You are a WCAG accessibility expert.
 
@@ -53,13 +39,7 @@ IMPROVEMENT: <suggestion or NONE>
 """
 
 
-# ---------------------------------------------------------------------------
-# Groq client
-# ---------------------------------------------------------------------------
-
 class GroqClient:
-    """Groq API client — LLaMA 3.1 8B Instant."""
-
     API_URL = "https://api.groq.com/openai/v1/chat/completions"
     DEFAULT_MODEL = "llama-3.1-8b-instant"
 
@@ -98,8 +78,7 @@ class GroqClient:
                 return data["choices"][0]["message"]["content"].strip()
             except Exception as e:
                 if "429" in str(e) and attempt < 2:
-                    # Try to extract retry-after from response headers
-                    wait = (attempt + 1) * 5  # 5s, 10s
+                    wait = (attempt + 1) * 5
                     try:
                         import re
                         match = re.search(r'try again in (\d+\.?\d*)s', str(e), re.I)
@@ -115,13 +94,7 @@ class GroqClient:
         return None
 
 
-# ---------------------------------------------------------------------------
-# Unified LLM interface
-# ---------------------------------------------------------------------------
-
 class LLMClient:
-    """Groq-backed LLM client for WCAG accessibility analysis."""
-
     def __init__(self):
         self._groq: GroqClient | None = None
         self._active_provider: str = "none"
@@ -150,27 +123,17 @@ class LLMClient:
         return self._active_provider != "none"
 
     def complete(self, prompt: str) -> str | None:
-        """Send a prompt and return the response, or None on failure."""
         if self._groq:
             return self._groq.complete(prompt)
         return None
 
 
-# ---------------------------------------------------------------------------
-# High-level analysis helpers
-# ---------------------------------------------------------------------------
-
 def get_llm_client() -> LLMClient:
-    """Return a configured LLMClient instance."""
     return LLMClient()
 
 
 def enhance_issue_fix(client: LLMClient, wcag_id: str, rule_title: str,
                       message: str, basic_fix: str, element_snippet: str = "") -> str | None:
-    """
-    Generate an enhanced, human-readable fix suggestion for a single issue.
-    Returns the LLM response string, or None if unavailable.
-    """
     if not client.available:
         return None
     prompt = PROMPT_ENHANCED_FIX.format(
@@ -184,10 +147,6 @@ def enhance_issue_fix(client: LLMClient, wcag_id: str, rule_title: str,
 
 
 def run_semantic_checks(client: LLMClient, html_snippet: str) -> list[dict]:
-    """
-    Run LLM-based semantic accessibility checks on an HTML snippet.
-    Returns a list of issue dicts compatible with run_all_checks() output.
-    """
     if not client.available or not html_snippet:
         return []
 
@@ -221,10 +180,6 @@ def run_semantic_checks(client: LLMClient, html_snippet: str) -> list[dict]:
 
 
 def analyze_readability(client: LLMClient, page_title: str, text_sample: str) -> dict | None:
-    """
-    Assess page readability for cognitive accessibility (WCAG 3.1.5).
-    Returns a dict with keys: level, concern, improvement — or None.
-    """
     if not client.available or not text_sample.strip():
         return None
 
@@ -248,7 +203,6 @@ def analyze_readability(client: LLMClient, page_title: str, text_sample: str) ->
             val = line.replace("IMPROVEMENT:", "").strip()
             result["improvement"] = None if val.upper() == "NONE" else val
 
-    # Fallback if structured parsing missed the level
     if result["level"] == "Unknown":
         lower = response.lower()
         if "simple" in lower:

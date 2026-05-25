@@ -13,12 +13,11 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 
-# Load .env file if present
 try:
     from dotenv import load_dotenv
     load_dotenv(Path(__file__).resolve().parent.parent / '.env')
 except ImportError:
-    pass  # python-dotenv not installed, rely on actual env vars
+    pass
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -126,15 +125,5 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
-# ---------------------------------------------------------------------------
-# LLM Configuration (Phase 4)
-# ---------------------------------------------------------------------------
-# Provider: Groq API — LLaMA 3.1 8B Instant
-# Free tier: 14,400 requests/day | Speed: ~1s per request
-# Get your key at: https://console.groq.com
-# Set via environment variable: set GROQ_API_KEY=gsk_...
-# Or create a .env file (never commit it)
-
-import os
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
 GROQ_MODEL   = 'llama-3.1-8b-instant'

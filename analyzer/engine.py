@@ -1,14 +1,3 @@
-"""
-Analysis engine — orchestrates deterministic checks + LLM enrichment.
-
-Flow per page:
-  1. Run all deterministic checks (checks.py)  → always runs
-  2. Run LLM semantic checks (llm.py)          → if LLM available
-  3. Enrich top issues with LLM fix suggestions → if LLM available
-  4. Run readability analysis                   → if LLM available
-  5. Save everything to DB
-"""
-
 import logging
 from bs4 import BeautifulSoup
 from core.models import Page, Rule, Issue
@@ -16,7 +5,6 @@ from analyzer.checks import run_all_checks
 
 logger = logging.getLogger(__name__)
 
-# Default rule metadata for rules that may not be in the DB yet
 RULE_DEFAULTS = {
     "1.1.1": ("Non-text Content",           "A",  "Perceivable"),
     "1.3.1": ("Info and Relationships",     "A",  "Perceivable"),
@@ -36,16 +24,10 @@ RULE_DEFAULTS = {
     "1.3.4": ("Orientation",                "AA", "Perceivable"),
 }
 
-# Max issues to enrich with LLM per page (keeps analysis fast)
 LLM_ENRICH_LIMIT = 5
 
 
 def calculate_compliance_score(issues: list) -> int:
-    """
-    Score 0–100 based on issue severity.
-    Deductions: critical=20, serious=10, moderate=5, minor=2
-    Minimum score is 0.
-    """
     deductions = 0
     for issue in issues:
         sev = issue.get("severity", "minor") if isinstance(issue, dict) else getattr(issue, "severity", "minor")
@@ -73,7 +55,6 @@ def get_or_create_rule(wcag_id: str) -> Rule:
 
 
 def _save_issues(page: Page, issues_found: list, source: str = "deterministic") -> list:
-    """Persist a list of issue dicts to the DB and return the saved Issue objects."""
     saved = []
     for issue_data in issues_found:
         rule = get_or_create_rule(issue_data["wcag_id"])
@@ -95,11 +76,6 @@ def _save_issues(page: Page, issues_found: list, source: str = "deterministic") 
 
 
 def _run_llm_enrichment(page: Page, saved_issues: list, client) -> None:
-    """
-    Enrich saved Issue objects with LLM-generated fix suggestions.
-    Also runs semantic checks and readability analysis.
-    Runs sequentially to respect Groq free tier rate limits.
-    """
     from analyzer.llm import (
         enhance_issue_fix,
         run_semantic_checks,
@@ -110,7 +86,6 @@ def _run_llm_enrichment(page: Page, saved_issues: list, client) -> None:
     page.save(update_fields=["llm_status"])
 
     try:
-        # 1. Enhance fix suggestions for top N deterministic issues
         deterministic = [
             (obj, data) for obj, data in saved_issues
             if data.get("source", "deterministic") == "deterministic"
@@ -131,7 +106,6 @@ def _run_llm_enrichment(page: Page, saved_issues: list, client) -> None:
                 issue_obj.llm_analysis = enhanced
                 issue_obj.save(update_fields=["llm_analysis"])
 
-        # 2. Run LLM semantic checks
         soup = BeautifulSoup(page.html_snapshot, "html.parser")
         body = soup.find("body")
         html_snippet = str(body)[:1500] if body else page.html_snapshot[:1500]
@@ -140,7 +114,6 @@ def _run_llm_enrichment(page: Page, saved_issues: list, client) -> None:
         if semantic_issues:
             _save_issues(page, semantic_issues, source="llm")
 
-        # 3. Readability analysis
         text_sample = soup.get_text(separator=" ", strip=True)
         title_tag = soup.find("title")
         page_title = title_tag.get_text(strip=True) if title_tag else ""
@@ -151,7 +124,6 @@ def _run_llm_enrichment(page: Page, saved_issues: list, client) -> None:
             page.readability_concern = readability.get("concern")
             page.readability_improvement = readability.get("improvement")
 
-        # Recalculate score and status after LLM adds issues
         all_issues = list(page.issue_set.all())
         page.compliance_score = calculate_compliance_score(all_issues)
         page.status = "fail" if all_issues else "pass"
@@ -171,11 +143,6 @@ def _run_llm_enrichment(page: Page, saved_issues: list, client) -> None:
 
 
 def analyze_page(page_id: int, use_llm: bool = True) -> bool:
-    """
-    Full analysis pipeline for a single page.
-    - Always runs deterministic checks
-    - Runs LLM enrichment if use_llm=True and a provider is available
-    """
     try:
         page = Page.objects.get(id=page_id)
     except Page.DoesNotExist:
@@ -184,14 +151,11 @@ def analyze_page(page_id: int, use_llm: bool = True) -> bool:
 
     logger.info(f"Analyzing page: {page.url}")
 
-    # Clear previous results
     Issue.objects.filter(page=page).delete()
 
-    # --- Step 1: Deterministic checks ---
     issues_found = run_all_checks(page.html_snapshot)
     saved_issues = _save_issues(page, issues_found, source="deterministic")
 
-    # Set page status and compliance score based on deterministic results
     page.status = "fail" if issues_found else "pass"
     page.compliance_score = calculate_compliance_score(issues_found)
     page.llm_status = "pending"
@@ -199,7 +163,6 @@ def analyze_page(page_id: int, use_llm: bool = True) -> bool:
 
     logger.info(f"Deterministic: {len(issues_found)} issues on {page.url}")
 
-    # --- Step 2: LLM enrichment (optional) ---
     if use_llm:
         try:
             from analyzer.llm import get_llm_client
@@ -219,7 +182,6 @@ def analyze_page(page_id: int, use_llm: bool = True) -> bool:
 
 
 def analyze_project(project_id: int, async_mode: bool = False, use_llm: bool = True) -> int:
-    """Analyze all pages in a project."""
     from analyzer.tasks import async_analyze_page
 
     pages = Page.objects.filter(project_id=project_id)
