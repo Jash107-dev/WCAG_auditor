@@ -1,7 +1,16 @@
 from django.urls import path
 from core import views
+from core import auth_views
 
 urlpatterns = [
+    # Auth
+    path("login/", auth_views.login_view, name="login"),
+    path("register/", auth_views.register_view, name="register"),
+    path("logout/", auth_views.logout_view, name="logout"),
+    path("forgot-password/", auth_views.forgot_password_view, name="forgot_password"),
+    path("terms/", auth_views.terms_view, name="terms"),
+    path("privacy/", auth_views.privacy_view, name="privacy"),
+
     path("", views.home, name="home"),
     path("dashboard/<int:project_id>/", views.dashboard, name="dashboard"),
     path("crawl-status/<int:project_id>/", views.crawl_status, name="crawl_status"),

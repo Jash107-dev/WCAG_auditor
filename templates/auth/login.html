@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In — WCAG Auditor</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Inter',sans-serif;background:#13172b;color:#f1f5f9;overflow:hidden}
+
+.page{display:flex;height:100vh;background:linear-gradient(135deg,#13172b 0%,#1a1f36 60%,#13172b 100%)}
+
+/* ── LEFT ── */
+.left{
+  width:48%;padding:36px 44px;
+  display:flex;flex-direction:column;justify-content:space-between;
+  position:relative;overflow:hidden;
+  min-height:100vh;
+}
+.left::before{
+  content:'';position:absolute;top:-5%;left:-5%;width:65%;height:65%;
+  background:radial-gradient(circle,rgba(99,102,241,0.15) 0%,transparent 65%);
+  pointer-events:none;
+}
+.left::after{
+  content:'';position:absolute;bottom:-10%;right:5%;width:50%;height:50%;
+  background:radial-gradient(circle,rgba(16,185,129,0.07) 0%,transparent 65%);
+  pointer-events:none;
+}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:40px;position:relative;z-index:2}
+.brand-icon{width:38px;height:38px;background:#6c63ff;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 4px 16px rgba(108,99,255,0.45);flex-shrink:0}
+.brand-icon svg{width:18px;height:18px}
+.brand-name{color:#fff;font-size:15px;font-weight:700;line-height:1.2}
+.brand-sub{color:#475569;font-size:11px;margin-top:1px}
+.hero{position:relative;z-index:2;margin-bottom:32px}
+.hero-title{color:#fff;font-size:44px;font-weight:800;line-height:1.1;margin-bottom:18px;letter-spacing:-0.03em}
+.hero-title span{color:#a78bfa}
+.hero-sub{color:#8892b0;font-size:14px;line-height:1.7;max-width:340px}
+.features{display:flex;flex-direction:column;gap:22px;position:relative;z-index:2;margin-bottom:0}
+.feature{display:flex;gap:12px;align-items:flex-start}
+.feat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.feat-icon svg{width:20px;height:20px}
+.fi-p{background:rgba(108,99,255,0.2);color:#a78bfa}
+.fi-b{background:rgba(59,130,246,0.2);color:#60A5FA}
+.fi-g{background:rgba(16,185,129,0.2);color:#34D399}
+.fi-i{background:rgba(139,92,246,0.2);color:#c4b5fd}
+.feat-title{color:#e2e8f0;font-size:14px;font-weight:700;line-height:1.3;margin-bottom:4px}
+.feat-desc{color:#475569;font-size:12px;line-height:1.55}
+</style>
+</head>
+<style>
+/* mock card — forgot_password style */
+.dash-wrap{
+  position:fixed;
+  top:50%;
+  left:44%;
+  transform:translate(-50%,-50%);
+  z-index:10;
+  width:320px;
+  perspective:1200px;
+}
+.dash-card{
+  background:#0F172A;border:1px solid rgba(255,255,255,0.05);
+  border-radius:18px;padding:24px;width:100%;
+  box-shadow:-20px 20px 40px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.1);
+  transform:rotateY(-16deg) rotateX(12deg) rotateZ(-3deg);
+  transform-style:preserve-3d;transition:transform 0.6s cubic-bezier(0.2,0.8,0.2,1),box-shadow 0.6s;
+}
+.dash-card:hover{transform:rotateY(-8deg) rotateX(6deg) rotateZ(-1.5deg) translateY(-3px);box-shadow:-10px 15px 30px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.15);}
+.dash-dots{display:flex;gap:5px;margin-bottom:16px}
+.dot{width:8px;height:8px;border-radius:50%}
+.dot.r{background:#EF4444}.dot.y{background:#F59E0B}.dot.g{background:#10B981}
+.dash-body{display:flex;flex-direction:column;gap:16px}
+.dash-top{display:flex;gap:16px;align-items:stretch}
+.ring-wrap{display:flex;flex-direction:column;align-items:center;justify-content:space-between;flex-shrink:0}
+.ring-svg{width:80px;height:80px;filter:drop-shadow(0 0 6px rgba(16,185,129,0.2))}
+.pbars{display:flex;flex-direction:column;gap:6px;width:80px;margin-top:8px}
+.pb-lbl{color:#64748B;font-size:9px;font-weight:500}
+.pb-track{height:5px;background:#1E293B;border-radius:3px;overflow:hidden}
+.pb-fill{height:100%;border-radius:3px}
+.pb-fill.p1{background:linear-gradient(90deg,#6c63ff,#a78bfa);width:82%}
+.pb-fill.p2{background:#475569;width:65%}
+.pb-fill.p3{background:#334155;width:45%}
+.checklist{display:flex;flex-direction:column;justify-content:space-between;flex:1}
+.cl-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.cl-icon{width:24px;height:24px;border-radius:5px;background:#1E293B;display:flex;align-items:center;justify-content:center;color:#94A3B8;flex-shrink:0}
+.cl-icon svg{width:12px;height:12px}
+.cl-lbl{color:#E2F0FE;font-size:11px;font-weight:500;flex:1}
+.cl-chk{width:16px;height:16px;border-radius:50%;background:rgba(16,185,129,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cl-chk svg{width:8px;height:8px;stroke:#34D399}
+.wave-wrap{margin-top:0}
+
+/* ── RIGHT ── */
+.right{
+  width:52%;display:flex;align-items:center;justify-content:center;
+  padding:36px 56px;position:relative;overflow-y:auto;
+}
+.right::before{
+  content:'';position:absolute;top:10%;right:5%;width:50%;height:50%;
+  background:radial-gradient(circle,rgba(99,102,241,0.08) 0%,transparent 65%);
+  pointer-events:none;
+}
+.card{width:100%;max-width:440px;position:relative;z-index:2}
+.card-title{color:#fff;font-size:28px;font-weight:800;margin-bottom:4px;letter-spacing:-0.02em}
+.card-sub{color:#64748B;font-size:13.5px;margin-bottom:22px}
+.msgs{margin-bottom:14px}
+.msg-error{background:rgba(239,68,68,0.12);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:9px 13px;font-size:13px;margin-bottom:6px}
+.msg-success{background:rgba(16,185,129,0.12);color:#6ee7b7;border:1px solid rgba(16,185,129,0.3);border-radius:8px;padding:9px 13px;font-size:13px;margin-bottom:6px}
+.field{margin-bottom:14px}
+.field label{display:block;color:#e2e8f0;font-size:13px;font-weight:600;margin-bottom:7px}
+.fw{position:relative}
+.fw input{
+  width:100%;height:46px;background:#0f172a;border:1.5px solid #1e293b;
+  border-radius:10px;padding:0 44px 0 15px;font-size:14px;
+  font-family:'Inter',sans-serif;color:#f1f5f9;outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.fw input:focus{border-color:#6c63ff;box-shadow:0 0 0 3px rgba(108,99,255,0.15)}
+.fw input::placeholder{color:#334155}
+.fi{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#334155;pointer-events:none;display:flex}
+.fi svg{width:17px;height:17px}
+.tb{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#334155;display:flex;padding:0;transition:color .2s}
+.tb:hover{color:#6c63ff}
+.tb svg{width:17px;height:17px}
+.rem-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.rem-l{display:flex;align-items:center;gap:7px}
+.rem-l input[type=checkbox]{accent-color:#6366F1;width:14px;height:14px;cursor:pointer}
+.rem-l label{color:#64748B;font-size:12.5px;cursor:pointer}
+.forgot{color:#6c63ff;font-size:12.5px;font-weight:600;text-decoration:none}
+.forgot:hover{text-decoration:underline}
+.btn-p{
+  width:100%;background:linear-gradient(135deg,#6c63ff,#7c73ff);color:#fff;border:none;border-radius:10px;
+  padding:14px;font-size:15px;font-weight:700;font-family:'Inter',sans-serif;
+  cursor:pointer;transition:background .2s,transform .1s;margin-bottom:18px;
+  box-shadow:0 4px 20px rgba(108,99,255,0.4);
+}
+.btn-p:hover{background:linear-gradient(135deg,#5a52d5,#6c63ff)}
+.btn-p:active{transform:scale(0.98)}
+.divider{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:#1e293b}
+.divider span{color:#475569;font-size:12px;white-space:nowrap}
+.soc-row{display:flex;gap:12px;margin-bottom:20px}
+.btn-soc{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:8px;
+  background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;
+  padding:11px 12px;font-size:12.5px;font-weight:600;
+  font-family:'Inter',sans-serif;color:#0f172a;cursor:pointer;
+  transition:background .2s,border-color .2s;white-space:nowrap;
+}
+.btn-soc:hover{background:#f8fafc;border-color:#a78bfa}
+.btn-soc svg{flex-shrink:0}
+.btm{text-align:center;color:#6b7a99;font-size:13px}
+.btm a{color:#6c63ff;text-decoration:none;font-weight:600}
+.btm a:hover{text-decoration:underline}
+</style>
+<body>
+<div class="page">
+
+  <!-- LEFT -->
+  <div class="left">
+    <div class="brand">
+      <div class="brand-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <div><div class="brand-name">WCAG Auditor</div><div class="brand-sub">Accessibility Intelligence</div></div>
+    </div>
+    <div class="hero">
+      <div class="hero-title">Build accessible<br>experiences for<br><span>everyone</span></div>
+      <div class="hero-sub">Scan, analyze and improve your websites for WCAG compliance with AI-powered insights.</div>
+    </div>
+    <div class="features">
+      <div class="feature">
+        <div class="feat-icon fi-p"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg></div>
+        <div><div class="feat-title">AI-Powered Scans</div><div class="feat-desc">Detect accessibility issues and get smart recommendations.</div></div>
+      </div>
+      <div class="feature">
+        <div class="feat-icon fi-b"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+        <div><div class="feat-title">Detailed Reports</div><div class="feat-desc">Understand problems with clear explanations and priority levels.</div></div>
+      </div>
+      <div class="feature">
+        <div class="feat-icon fi-g"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+        <div><div class="feat-title">WCAG 2.1 AA Compliant</div><div class="feat-desc">Built to help you meet global accessibility standards.</div></div>
+      </div>
+      <div class="feature">
+        <div class="feat-icon fi-i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div><div class="feat-title">For Everyone</div><div class="feat-desc">Perfect for developers, designers and teams of all sizes.</div></div>
+      </div>
+    </div>
+    <div class="dash-wrap">
+      <div class="dash-card">
+        <div class="dash-dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
+        <div class="dash-body">
+          <div class="dash-top">
+            <div class="ring-wrap">
+              <svg class="ring-svg" viewBox="0 0 72 72">
+                <defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#10B981"/><stop offset="100%" stop-color="#34D399"/></linearGradient></defs>
+                <circle cx="36" cy="36" r="28" fill="none" stroke="#1E293B" stroke-width="6"/>
+                <circle cx="36" cy="36" r="28" fill="none" stroke="url(#rg)" stroke-width="6" stroke-dasharray="145 31" stroke-linecap="round" transform="rotate(-90 36 36)"/>
+                <circle cx="36" cy="36" r="22" fill="#0F172A"/>
+                <text x="36" y="33" text-anchor="middle" fill="#10B981" font-size="12" font-weight="800" font-family="Inter,sans-serif">AA</text>
+                <text x="36" y="44" text-anchor="middle" fill="#64748B" font-size="7" font-weight="600" font-family="Inter,sans-serif">Excellent</text>
+              </svg>
+              <div class="pbars">
+                <div class="pb-lbl">Contrast</div><div class="pb-track"><div class="pb-fill p1"></div></div>
+                <div class="pb-lbl" style="margin-top:4px">Structure</div><div class="pb-track"><div class="pb-fill p2"></div></div>
+                <div class="pb-lbl" style="margin-top:4px">ARIA</div><div class="pb-track"><div class="pb-fill p3"></div></div>
+              </div>
+            </div>
+            <div class="checklist">
+              <div class="cl-row"><div class="cl-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div><span class="cl-lbl">Perceivable</span><div class="cl-chk"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div></div>
+              <div class="cl-row"><div class="cl-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/><line x1="12" y1="17" x2="12" y2="20"/></svg></div><span class="cl-lbl">Operable</span><div class="cl-chk"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div></div>
+              <div class="cl-row"><div class="cl-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div><span class="cl-lbl">Understandable</span><div class="cl-chk"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div></div>
+              <div class="cl-row"><div class="cl-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></div><span class="cl-lbl">Robust</span><div class="cl-chk"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div></div>
+            </div>
+          </div>
+          <div class="wave-wrap">
+            <svg viewBox="0 0 280 48" width="100%" height="48" preserveAspectRatio="none">
+              <defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6366F1" stop-opacity="0.4"/><stop offset="100%" stop-color="#6366F1" stop-opacity="0.01"/></linearGradient></defs>
+              <path d="M0,38 C30,28 50,42 80,32 C110,22 130,38 160,28 C190,18 210,34 240,24 C260,17 270,22 280,20 L280,48 L0,48 Z" fill="url(#wg)"/>
+              <path d="M0,38 C30,28 50,42 80,32 C110,22 130,38 160,28 C190,18 210,34 240,24 C260,17 270,22 280,20" fill="none" stroke="#6c63ff" stroke-width="2"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right">
+    <div class="card">
+      <div class="card-title">Welcome back</div>
+      <div class="card-sub">Sign in to your account</div>
+      {% if messages %}<div class="msgs">{% for message in messages %}<div class="msg-{{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+      <form method="POST" action="{% url 'login' %}">
+        {% csrf_token %}
+        <div class="field">
+          <label for="email">Email address</label>
+          <div class="fw">
+            <input type="email" id="email" name="email" placeholder="you@example.com" value="{{ email|default:'' }}" required autocomplete="email">
+            <span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="fw">
+            <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password">
+            <button type="button" class="tb" onclick="tp('password',this)" aria-label="Toggle password">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="rem-row">
+          <div class="rem-l"><input type="checkbox" id="rem" name="remember_me"><label for="rem">Remember me</label></div>
+          <a href="{% url 'forgot_password' %}" class="forgot">Forgot password?</a>
+        </div>
+        <button type="submit" class="btn-p">Sign in</button>
+      </form>
+      <div class="divider"><span>or continue with</span></div>
+      <div class="soc-row">
+        <button class="btn-soc" type="button">
+          <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          Continue with Google
+        </button>
+      </div>
+      <div class="btm">Don't have an account? <a href="{% url 'register' %}">Create account</a></div>
+    </div>
+  </div>
+
+</div>
+<script>
+function tp(id,btn){
+  var el=document.getElementById(id);
+  var show=el.type==='password';
+  el.type=show?'text':'password';
+  btn.querySelector('svg').innerHTML=show
+    ?'<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+    :'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+}
+</script>
+</body>
+</html>
