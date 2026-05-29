@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.http import JsonResponse, HttpResponse
 from core.models import Project, Page, Issue, Rule
@@ -13,6 +14,7 @@ from reportlab.lib.units import inch
 from io import BytesIO
 from datetime import datetime
 
+@login_required
 def home(request):
     if request.method == "POST":
         url = request.POST.get("url", "").strip()
@@ -76,6 +78,7 @@ def stop_crawl(request, project_id):
     except Project.DoesNotExist:
         return JsonResponse({"error": "Project not found"}, status=404)
 
+@login_required
 def dashboard(request, project_id):
     proj = Project.objects.get(id=project_id)
     all_pages = proj.page_set.all()
@@ -130,10 +133,12 @@ def dashboard(request, project_id):
         ada_msg = "This site is PARTIALLY compliant with WCAG " + proj.wcag_level + ". " + str(pages_with_issues) + " pages have accessibility issues that need attention."
     return render(request, "core/dashboard.html", {"project": proj, "pages": all_pages, "total_pages": total_pages, "compliant_pages": compliant_pages, "pages_with_issues": pages_with_issues, "non_compliant_pages": non_compliant_pages, "total_issues": total_issues, "percent_compliant": percent_compliant, "partial_pages": partial_pages, "partial_percent": partial_percent, "non_compliant_percent": non_compliant_percent, "critical_issues": critical_count, "serious_issues": serious_count, "moderate_issues": moderate_count, "minor_issues": minor_count, "critical_percent": critical_pct, "serious_percent": serious_pct, "moderate_percent": moderate_pct, "minor_percent": minor_pct, "top_issues": top_issues, "recent_scans": recent_scans, "ada_status": ada_status, "ada_message": ada_msg})
 
+@login_required
 def projects_list(request):
     all_projects = Project.objects.order_by("-created_at")
     return render(request, "core/projects.html", {"projects": all_projects})
 
+@login_required
 def scans_list(request):
     all_scans = Project.objects.order_by("-created_at")
     total_scans = all_scans.count()
@@ -141,6 +146,7 @@ def scans_list(request):
     pending = all_scans.filter(status="pending").count()
     return render(request, "core/scans.html", {"scans": all_scans, "total_scans": total_scans, "completed": completed, "pending": pending})
 
+@login_required
 def pages_list(request):
     all_pages = Page.objects.select_related("project").order_by("-id")
     total = all_pages.count()
@@ -148,6 +154,7 @@ def pages_list(request):
     failed = all_pages.filter(status="fail").count()
     return render(request, "core/pages.html", {"pages": all_pages, "total": total, "passed": passed, "failed": failed})
 
+@login_required
 def issues_all(request):
     all_issues = Issue.objects.select_related("rule", "page", "page__project").order_by("-page__project__created_at", "page__project_id", "-id")
     total = all_issues.count()
@@ -163,15 +170,18 @@ def issues_all(request):
         issues_by_project[project_id]["issues"].append(issue)
     return render(request, "core/issues_all.html", {"issues_by_project": issues_by_project, "total": total, "critical": critical, "serious": serious, "moderate": moderate, "minor": minor})
 
+@login_required
 def issues_list(request, project_id):
     proj = Project.objects.get(id=project_id)
     proj_issues = Issue.objects.filter(page__project=proj).select_related("rule", "page")
     return render(request, "core/issues.html", {"project": proj, "issues": proj_issues})
 
+@login_required
 def rules_list(request):
     all_rules = Rule.objects.all().order_by("level", "wcag_id")
     return render(request, "core/rules.html", {"rules": all_rules})
 
+@login_required
 def reports_list(request):
     done_projects = Project.objects.exclude(status="pending").annotate(
         issue_count=Count("page__issue")
@@ -179,6 +189,7 @@ def reports_list(request):
     return render(request, "core/reports.html", {"projects": done_projects})
 
 
+@login_required
 def export_csv(request, project_id):
     proj = Project.objects.get(id=project_id)
     all_issues = Issue.objects.filter(page__project=proj).select_related("rule", "page")
@@ -202,6 +213,7 @@ def export_csv(request, project_id):
 
     return response
 
+@login_required
 def settings_page(request):
     from analyzer.llm import get_llm_client
     client = get_llm_client()

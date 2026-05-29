@@ -163,7 +163,7 @@ def crawl(start_url, project_id=None, scope=SCOPE_FULL, use_llm=False):
                     queued.add(new_link)
                     added += 1
                 if added:
-                    print(f"  → Discovered {added} new links (queue: {len(queue)})")
+                    print(f"  → Discovered {added} new links are (queue: {len(queue)})")
 
         except Exception as e:
             print(f"  Error fetching {url}: {e}")

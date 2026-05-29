@@ -190,57 +190,100 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:#13172b;color:#f
       <div class="card-title">Create your account</div>
       <div class="card-sub">Get started with WCAG Auditor</div>
       {% if messages %}<div class="msgs">{% for message in messages %}<div class="msg-{{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
-      <form method="POST" action="{% url 'register' %}">
+
+      <!-- OTP status message -->
+      <div id="otp-msg" style="display:none;border-radius:8px;padding:9px 13px;font-size:13px;margin-bottom:10px"></div>
+
+      <form method="POST" action="{% url 'register' %}" id="register-form">
         {% csrf_token %}
-        <div class="field">
-          <label for="full_name">Full name</label>
-          <div class="fw">
-            <input type="text" id="full_name" name="full_name" placeholder="Your full name" value="{{ full_name|default:'' }}" required autocomplete="name">
-            <span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-          </div>
-        </div>
+
+        <!-- STEP 1: Email + Verify -->
         <div class="field">
           <label for="email">Email address</label>
-          <div class="fw">
-            <input type="email" id="email" name="email" placeholder="you@example.com" value="{{ email|default:'' }}" required autocomplete="email">
-            <span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
-          </div>
-        </div>
-        <div class="field">
-          <label for="password">Password</label>
-          <div class="fw">
-            <input type="password" id="password" name="password" placeholder="Create a password" required autocomplete="new-password" oninput="checkStrength(this.value)">
-            <button type="button" class="tb" onclick="tp('password',this)" aria-label="Toggle password">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-          </div>
-          <div class="hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Must be at least 8 characters</div>
-          <div class="strength-wrap" id="strengthWrap" style="display:none">
-            <div class="strength-bars"><div class="s-bar" id="sb1"></div><div class="s-bar" id="sb2"></div><div class="s-bar" id="sb3"></div><div class="s-bar" id="sb4"></div></div>
-            <div class="strength-label" id="strengthLabel"></div>
-          </div>
-        </div>
-        <div class="field">
-          <label for="confirm_password">Confirm password</label>
-          <div class="fw">
-            <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm your password" required autocomplete="new-password">
-            <button type="button" class="tb" onclick="tp('confirm_password',this)" aria-label="Toggle confirm password">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <div class="fw" style="display:flex;gap:8px">
+            <input type="email" id="email" name="email" placeholder="you@example.com"
+              value="{{ email|default:'' }}" required autocomplete="email"
+              style="flex:1" oninput="onEmailChange()">
+            <button type="button" id="btn-send-otp" onclick="sendOtp()"
+              style="flex-shrink:0;height:44px;padding:0 16px;background:#6c63ff;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;white-space:nowrap;transition:background .2s">
+              Verify
             </button>
           </div>
         </div>
-        <div class="terms-row">
-          <input type="checkbox" id="terms" name="terms" required>
-          <label for="terms">I agree to the <a href="{% url 'terms' %}">Terms of Service</a> and <a href="{% url 'privacy' %}">Privacy Policy</a></label>
+
+        <!-- STEP 2: OTP input (hidden until email sent) -->
+        <div class="field" id="otp-section" style="display:none">
+          <label for="otp-input">Enter OTP <span style="color:#8892b0;font-weight:400;font-size:11px">(sent to your email)</span></label>
+          <div class="fw" style="display:flex;gap:8px">
+            <input type="text" id="otp-input" placeholder="6-digit code" maxlength="6"
+              inputmode="numeric" autocomplete="one-time-code"
+              style="flex:1;letter-spacing:0.2em;font-size:16px;text-align:center">
+            <button type="button" id="btn-verify-otp" onclick="verifyOtp()"
+              style="flex-shrink:0;height:44px;padding:0 16px;background:#6c63ff;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;white-space:nowrap;transition:background .2s">
+              Confirm
+            </button>
+          </div>
+          <div style="margin-top:6px;font-size:11.5px;color:#8892b0">
+            Didn't receive it?
+            <button type="button" onclick="sendOtp()" id="btn-resend"
+              style="background:none;border:none;color:#6c63ff;font-size:11.5px;font-weight:600;cursor:pointer;padding:0;font-family:'Inter',sans-serif">
+              Resend OTP
+            </button>
+          </div>
         </div>
-        <button type="submit" class="btn-p">Create account</button>
+
+        <!-- Email verified badge -->
+        <div id="email-verified-badge" style="display:none;align-items:center;gap:8px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:13px;color:#34D399">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Email verified
+        </div>
+
+        <!-- STEP 3: Rest of form (hidden until OTP verified) -->
+        <div id="rest-of-form" style="display:none">
+          <div class="field">
+            <label for="full_name">Full name</label>
+            <div class="fw">
+              <input type="text" id="full_name" name="full_name" placeholder="Your full name" value="{{ full_name|default:'' }}" autocomplete="name">
+              <span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <div class="fw">
+              <input type="password" id="password" name="password" placeholder="Create a password" autocomplete="new-password" oninput="checkStrength(this.value)">
+              <button type="button" class="tb" onclick="tp('password',this)" aria-label="Toggle password">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div class="hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Must be at least 8 characters</div>
+            <div class="strength-wrap" id="strengthWrap" style="display:none">
+              <div class="strength-bars"><div class="s-bar" id="sb1"></div><div class="s-bar" id="sb2"></div><div class="s-bar" id="sb3"></div><div class="s-bar" id="sb4"></div></div>
+              <div class="strength-label" id="strengthLabel"></div>
+            </div>
+          </div>
+          <div class="field">
+            <label for="confirm_password">Confirm password</label>
+            <div class="fw">
+              <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm your password" autocomplete="new-password">
+              <button type="button" class="tb" onclick="tp('confirm_password',this)" aria-label="Toggle confirm password">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="terms-row">
+            <input type="checkbox" id="terms" name="terms" required>
+            <label for="terms">I agree to the <a href="{% url 'terms' %}">Terms of Service</a> and <a href="{% url 'privacy' %}">Privacy Policy</a></label>
+          </div>
+          <button type="submit" class="btn-p">Create account</button>
+        </div>
+
       </form>
       <div class="divider"><span>or continue with</span></div>
       <div class="soc-row">
-        <button class="btn-soc" type="button">
+        <a href="/accounts/google/login/" class="btn-soc" style="text-decoration:none">
           <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
           Continue with Google
-        </button>
+        </a>
       </div>
       <div class="btm">Already have an account? <a href="{% url 'login' %}">Sign in</a></div>
     </div>
@@ -248,6 +291,96 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:#13172b;color:#f
 
 </div>
 <script>
+var emailVerified = false;
+
+function showMsg(text, isError) {
+  var el = document.getElementById('otp-msg');
+  el.textContent = text;
+  el.style.display = 'block';
+  el.style.background = isError ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)';
+  el.style.color = isError ? '#fca5a5' : '#6ee7b7';
+  el.style.border = isError ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(16,185,129,0.3)';
+}
+
+function onEmailChange() {
+  if (emailVerified) {
+    emailVerified = false;
+    document.getElementById('email-verified-badge').style.display = 'none';
+    document.getElementById('rest-of-form').style.display = 'none';
+    document.getElementById('otp-section').style.display = 'none';
+    document.getElementById('otp-msg').style.display = 'none';
+  }
+}
+
+function sendOtp() {
+  var email = document.getElementById('email').value.trim();
+  if (!email) { showMsg('Please enter your email address.', true); return; }
+
+  var btn = document.getElementById('btn-send-otp');
+  btn.textContent = 'Sending...';
+  btn.disabled = true;
+
+  var fd = new FormData();
+  fd.append('email', email);
+  fd.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+  fetch('/send-otp/', {method:'POST', body:fd})
+    .then(function(r){return r.json();})
+    .then(function(data) {
+      btn.textContent = 'Resend';
+      btn.disabled = false;
+      if (data.success) {
+        document.getElementById('otp-section').style.display = 'block';
+        document.getElementById('otp-input').focus();
+        showMsg('OTP sent! Check your inbox.', false);
+      } else {
+        showMsg(data.error || 'Failed to send OTP.', true);
+      }
+    })
+    .catch(function() {
+      btn.textContent = 'Verify';
+      btn.disabled = false;
+      showMsg('Network error. Please try again.', true);
+    });
+}
+
+function verifyOtp() {
+  var otp = document.getElementById('otp-input').value.trim();
+  if (!otp) { showMsg('Please enter the OTP.', true); return; }
+
+  var btn = document.getElementById('btn-verify-otp');
+  btn.textContent = 'Checking...';
+  btn.disabled = true;
+
+  var fd = new FormData();
+  fd.append('otp', otp);
+  fd.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+  fetch('/verify-otp/', {method:'POST', body:fd})
+    .then(function(r){return r.json();})
+    .then(function(data) {
+      btn.textContent = 'Confirm';
+      btn.disabled = false;
+      if (data.success) {
+        emailVerified = true;
+        document.getElementById('otp-section').style.display = 'none';
+        document.getElementById('email-verified-badge').style.display = 'flex';
+        document.getElementById('rest-of-form').style.display = 'block';
+        document.getElementById('email').readOnly = true;
+        document.getElementById('btn-send-otp').style.display = 'none';
+        showMsg('Email verified! Complete your registration below.', false);
+        document.getElementById('full_name').focus();
+      } else {
+        showMsg(data.error || 'Invalid OTP.', true);
+      }
+    })
+    .catch(function() {
+      btn.textContent = 'Confirm';
+      btn.disabled = false;
+      showMsg('Network error. Please try again.', true);
+    });
+}
+
 function tp(id,btn){
   var el=document.getElementById(id);var show=el.type==='password';el.type=show?'text':'password';
   btn.querySelector('svg').innerHTML=show
