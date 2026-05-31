@@ -168,7 +168,7 @@ def register_view(request):
         user.save()
 
         # Auto login after register
-        login(request, user)
+        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
         request.session.pop("otp_verified_email", None)
         request.session.pop("otp_email", None)
         messages.success(request, f"Welcome, {user.first_name}! Your account has been created.")
