@@ -53,6 +53,7 @@
             </div>
             <a href="/dashboard/{{ data.project.id }}/" class="btn-outline" style="padding:6px 16px; font-size:12px;">View Project</a>
         </div>
+        <div class="table-wrap">
         <table style="width:100%; border-collapse:collapse; font-size:13px; background:white; border-radius:8px; overflow:hidden;">
             <thead>
                 <tr style="border-bottom:2px solid #f0f2f5; background:#fafbfc;">
@@ -79,6 +80,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
     </div>
     {% empty %}
     <div style="padding:40px; text-align:center; color:#8892b0;">No issues found. <a href="/" style="color:#6c63ff; text-decoration:none; font-weight:600;">Start a scan</a></div>

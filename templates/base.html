@@ -18,6 +18,16 @@
             color: #1a1f36;
         }
 
+        /* ── Sidebar overlay (mobile) ── */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 99;
+        }
+        .sidebar-overlay.active { display: block; }
+
         /* ── Sidebar ── */
         .sidebar {
             width: 230px;
@@ -29,6 +39,7 @@
             height: 100vh;
             z-index: 100;
             border-right: 1px solid rgba(255,255,255,0.04);
+            transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
         }
 
         .sidebar-logo {
@@ -49,6 +60,7 @@
             justify-content: center;
             font-size: 18px;
             box-shadow: 0 4px 12px rgba(108,99,255,0.4);
+            flex-shrink: 0;
         }
 
         .sidebar-logo .logo-text h3 {
@@ -62,6 +74,19 @@
             font-size: 10px;
             color: #6b7a99;
             margin-top: 1px;
+        }
+
+        /* Close button inside sidebar (mobile only) */
+        .sidebar-close {
+            display: none;
+            background: none;
+            border: none;
+            color: #6b7a99;
+            font-size: 22px;
+            cursor: pointer;
+            margin-left: auto;
+            padding: 4px 8px;
+            line-height: 1;
         }
 
         .sidebar-nav {
@@ -172,6 +197,7 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
+            min-width: 0;
         }
 
         .topbar {
@@ -185,22 +211,48 @@
             top: 0;
             z-index: 50;
             box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            gap: 12px;
         }
+
+        /* Hamburger button (hidden on desktop) */
+        .hamburger {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 8px;
+            color: #1a1f36;
+            flex-shrink: 0;
+            transition: background 0.15s;
+        }
+        .hamburger:hover { background: #f0f2f8; }
+        .hamburger svg { display: block; width: 22px; height: 22px; }
 
         .topbar h2 {
             font-size: 18px;
             color: #1a1f36;
             font-weight: 700;
             letter-spacing: -0.2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .topbar-right {
             display: flex;
             align-items: center;
             gap: 12px;
+            flex-shrink: 0;
         }
 
-        .page-body { padding: 24px 28px; }
+        .topbar-user {
+            font-size: 13px;
+            color: #8892b0;
+            white-space: nowrap;
+        }
+
+        .page-body { padding: 20px 24px; }
 
         /* ── Cards ── */
         .card {
@@ -270,56 +322,159 @@
         .status-failed    { color: #c53030; font-size: 12px; font-weight: 600; background:#fff5f5; padding:2px 8px; border-radius:20px; }
         .status-pending   { color: #b7791f; font-size: 12px; font-weight: 600; background:#fffbeb; padding:2px 8px; border-radius:20px; }
 
-        /* ── Table rows hover ── */
+        /* ── Table ── */
         tbody tr { transition: background 0.12s; }
         tbody tr:hover { background: #fafbff; }
+
+        /* Make tables scroll horizontally on mobile */
+        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
         /* ── Scrollbar ── */
         ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+        /* ════════════════════════════════════════
+           MOBILE RESPONSIVE
+           ════════════════════════════════════════ */
+        @media (max-width: 768px) {
+
+            /* Sidebar slides off-screen by default */
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .sidebar-close {
+                display: block;
+            }
+
+            /* Main content takes full width */
+            .main-content {
+                margin-left: 0;
+            }
+
+            /* Show hamburger */
+            .hamburger {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            /* Topbar adjustments */
+            .topbar {
+                padding: 12px 16px;
+            }
+            .topbar h2 {
+                font-size: 15px;
+            }
+            .topbar-user {
+                display: none; /* hide username text on small screens */
+            }
+
+            /* Page body padding */
+            .page-body {
+                padding: 14px 12px;
+            }
+
+            /* ── Stat grids → 2 columns ── */
+            [style*="grid-template-columns:repeat(5,1fr)"],
+            [style*="grid-template-columns:repeat(5, 1fr)"] {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+
+            [style*="grid-template-columns:repeat(3,1fr)"],
+            [style*="grid-template-columns:repeat(3, 1fr)"] {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+
+            [style*="grid-template-columns:1fr 1fr 320px"],
+            [style*="grid-template-columns:1fr 1fr"],
+            [style*="grid-template-columns:1fr 320px"] {
+                grid-template-columns: 1fr !important;
+            }
+
+            /* ── Scan form row → stack ── */
+            [style*="display:flex"][style*="flex-wrap:wrap"] {
+                flex-wrap: wrap !important;
+            }
+
+            /* ── Loading overlay card ── */
+            [style*="min-width:400px"] {
+                min-width: unset !important;
+                width: 90vw !important;
+                padding: 28px 20px !important;
+            }
+
+            /* ── Card padding ── */
+            .card {
+                padding: 14px;
+            }
+
+            /* ── Topbar sign-out button text ── */
+            .topbar-right form button {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            /* On very small phones, 5-col grids go single column */
+            [style*="grid-template-columns:repeat(5,1fr)"],
+            [style*="grid-template-columns:repeat(5, 1fr)"] {
+                grid-template-columns: 1fr 1fr !important;
+            }
+
+            .topbar h2 { font-size: 14px; }
+            .page-body { padding: 10px 10px; }
+        }
     </style>
 </head>
 <body>
 
-<div class="sidebar">
+<!-- Sidebar overlay (tap to close on mobile) -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<div class="sidebar" id="sidebar">
     <div class="sidebar-logo">
         <div class="logo-icon">✓</div>
         <div class="logo-text">
             <h3>WCAG Auditor</h3>
             <p>Accessibility Intelligence</p>
         </div>
+        <button class="sidebar-close" onclick="closeSidebar()" aria-label="Close menu">✕</button>
     </div>
 
     <nav class="sidebar-nav">
         <div class="nav-section-label">Main</div>
-        <a href="/" class="{% block nav_home %}{% endblock %}">
+        <a href="/" class="{% block nav_home %}{% endblock %}" onclick="closeSidebar()">
             <span class="nav-icon">🏠</span> Dashboard
         </a>
-        <a href="/projects/" class="{% block nav_projects %}{% endblock %}">
+        <a href="/projects/" class="{% block nav_projects %}{% endblock %}" onclick="closeSidebar()">
             <span class="nav-icon">📁</span> Projects
         </a>
-        <a href="/scans/" class="{% block nav_scans %}{% endblock %}">
+        <a href="/scans/" class="{% block nav_scans %}{% endblock %}" onclick="closeSidebar()">
             <span class="nav-icon">🔍</span> Scans
         </a>
 
         <div class="nav-section-label">Analysis</div>
-        <a href="/pages/" class="{% block nav_pages %}{% endblock %}">
+        <a href="/pages/" class="{% block nav_pages %}{% endblock %}" onclick="closeSidebar()">
             <span class="nav-icon">📄</span> Pages
         </a>
-        <a href="/issues/" class="{% block nav_issues %}{% endblock %}">
+        <a href="/issues/" class="{% block nav_issues %}{% endblock %}" onclick="closeSidebar()">
             <span class="nav-icon">⚠️</span> Issues
         </a>
-        <a href="/rules/" class="{% block nav_rules %}{% endblock %}">
+        <a href="/rules/" class="{% block nav_rules %}{% endblock %}" onclick="closeSidebar()">
             <span class="nav-icon">📋</span> Rules
         </a>
 
         <div class="nav-section-label">Output</div>
-        <a href="/reports/" class="{% block nav_reports %}{% endblock %}">
+        <a href="/reports/" class="{% block nav_reports %}{% endblock %}" onclick="closeSidebar()">
             <span class="nav-icon">📊</span> Reports
         </a>
-        <a href="/settings/" class="{% block nav_settings %}{% endblock %}">
+        <a href="/settings/" class="{% block nav_settings %}{% endblock %}" onclick="closeSidebar()">
             <span class="nav-icon">ℹ️</span> About
         </a>
     </nav>
@@ -348,10 +503,20 @@
 
 <div class="main-content">
     <div class="topbar">
+        <!-- Hamburger (mobile only) -->
+        <button class="hamburger" onclick="openSidebar()" aria-label="Open menu" aria-expanded="false" id="hamburgerBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <line x1="3" y1="12" x2="21" y2="12"/>
+                <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+        </button>
+
         <h2>{% block page_title %}Dashboard{% endblock %}</h2>
+
         <div class="topbar-right">
             {% if user.is_authenticated %}
-            <span style="font-size:13px; color:#8892b0;">
+            <span class="topbar-user">
                 👤 {{ user.first_name|default:user.username }}
             </span>
             <form method="POST" action="/logout/" style="margin:0;">
@@ -379,6 +544,25 @@
         {% block content %}{% endblock %}
     </div>
 </div>
+
+<script>
+function openSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebarOverlay').classList.add('active');
+    document.getElementById('hamburgerBtn').setAttribute('aria-expanded', 'true');
+    document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('active');
+    document.getElementById('hamburgerBtn').setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+}
+// Close sidebar on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeSidebar();
+});
+</script>
 
 </body>
 </html>
