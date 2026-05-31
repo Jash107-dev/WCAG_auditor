@@ -1,4 +1,21 @@
 from django.db import models
+from django.contrib.auth.models import User
+from django.utils import timezone
+
+
+class PasswordResetToken(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reset_tokens")
+    token = models.CharField(max_length=64, unique=True, db_index=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    used = models.BooleanField(default=False)
+
+    def is_valid(self):
+        """Returns True if token is unused and less than 30 minutes old."""
+        age = (timezone.now() - self.created_at).total_seconds()
+        return not self.used and age <= 1800
+
+    def __str__(self):
+        return f"Reset token for {self.user.email}"
 
 
 class Project(models.Model):

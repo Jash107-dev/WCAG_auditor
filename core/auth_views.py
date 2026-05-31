@@ -8,6 +8,7 @@ from django.template.loader import render_to_string
 from django.conf import settings
 from django.utils.crypto import get_random_string
 from django.utils import timezone
+from core.models import PasswordResetToken
 import random
 import time
 
@@ -188,11 +189,12 @@ def forgot_password_view(request):
         # Always show success to prevent email enumeration
         try:
             user = User.objects.get(email=email)
+
+            # Invalidate any existing unused tokens for this user
+            PasswordResetToken.objects.filter(user=user, used=False).update(used=True)
+
             token = get_random_string(48)
-            request.session[f"pwd_reset_{token}"] = {
-                "user_id": user.id,
-                "created_at": time.time(),
-            }
+            PasswordResetToken.objects.create(user=user, token=token)
 
             reset_url = request.build_absolute_uri(f"/reset-password/{token}/")
 
@@ -229,16 +231,13 @@ def forgot_password_view(request):
 
 
 def reset_password_view(request, token):
-    session_key = f"pwd_reset_{token}"
-    data = request.session.get(session_key)
-
-    if not data:
+    try:
+        reset_token = PasswordResetToken.objects.select_related("user").get(token=token)
+    except PasswordResetToken.DoesNotExist:
         messages.error(request, "This reset link is invalid or has already been used.")
         return redirect("forgot_password")
 
-    # 30-minute expiry
-    if time.time() - data["created_at"] > 1800:
-        request.session.pop(session_key, None)
+    if not reset_token.is_valid():
         messages.error(request, "This reset link has expired. Please request a new one.")
         return redirect("forgot_password")
 
@@ -254,16 +253,16 @@ def reset_password_view(request, token):
             messages.error(request, "Passwords do not match.")
             return render(request, "auth/reset_password.html", {"token": token})
 
-        try:
-            user = User.objects.get(id=data["user_id"])
-            user.set_password(password1)
-            user.save()
-            request.session.pop(session_key, None)
-            messages.success(request, "Password reset successfully. You can now sign in.")
-            return redirect("login")
-        except User.DoesNotExist:
-            messages.error(request, "User not found.")
-            return redirect("forgot_password")
+        user = reset_token.user
+        user.set_password(password1)
+        user.save()
+
+        # Mark token as used
+        reset_token.used = True
+        reset_token.save()
+
+        messages.success(request, "Password reset successfully. You can now sign in.")
+        return redirect("login")
 
     return render(request, "auth/reset_password.html", {"token": token})
 
