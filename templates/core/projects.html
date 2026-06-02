@@ -1,11 +1,36 @@
 {% extends "base.html" %}
 {% block nav_projects %}active{% endblock %}
-{% block page_title %}Projects{% endblock %}
+{% block page_title %}Projects & Scans{% endblock %}
 
 {% block content %}
+
+<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px;">
+    <div class="card" style="display:flex; align-items:center; gap:14px;">
+        <div style="width:44px; height:44px; background:#ede9fe; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px;">🔍</div>
+        <div>
+            <div style="font-size:12px; color:#8892b0; font-weight:600;">Total Scans</div>
+            <div style="font-size:26px; font-weight:700; color:#1a1f36;">{{ total_scans }}</div>
+        </div>
+    </div>
+    <div class="card" style="display:flex; align-items:center; gap:14px;">
+        <div style="width:44px; height:44px; background:#d1fae5; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px;">✅</div>
+        <div>
+            <div style="font-size:12px; color:#8892b0; font-weight:600;">Completed</div>
+            <div style="font-size:26px; font-weight:700; color:#1a1f36;">{{ completed }}</div>
+        </div>
+    </div>
+    <div class="card" style="display:flex; align-items:center; gap:14px;">
+        <div style="width:44px; height:44px; background:#fef3c7; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px;">⏳</div>
+        <div>
+            <div style="font-size:12px; color:#8892b0; font-weight:600;">In Progress</div>
+            <div style="font-size:26px; font-weight:700; color:#1a1f36;">{{ in_progress }}</div>
+        </div>
+    </div>
+</div>
+
 <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <h3 style="font-size:15px; font-weight:700; color:#1a1f36;">All Projects</h3>
+        <h3 style="font-size:15px; font-weight:700; color:#1a1f36;">All Projects & Scans</h3>
         <a href="/" class="btn-primary">+ New Scan</a>
     </div>
 
@@ -18,7 +43,7 @@
                 <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">WCAG Level</th>
                 <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Pages</th>
                 <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Status</th>
-                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Created</th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Date</th>
                 <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Action</th>
             </tr>
         </thead>
@@ -50,7 +75,7 @@
                         <span style="color:#8892b0;">{{ project.status|capfirst }}</span>
                     {% endif %}
                 </td>
-                <td style="padding:10px; color:#8892b0;">{{ project.created_at|date:"M d, Y" }}</td>
+                <td style="padding:10px; color:#8892b0;">{{ project.created_at|date:"M d, Y g:i A" }}</td>
                 <td style="padding:10px;">
                     <a href="/dashboard/{{ project.id }}/" class="btn-outline" style="padding:4px 12px; font-size:12px;">View Dashboard</a>
                 </td>

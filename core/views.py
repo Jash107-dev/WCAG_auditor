@@ -136,15 +136,19 @@ def dashboard(request, project_id):
 @login_required
 def projects_list(request):
     all_projects = Project.objects.filter(owner=request.user).order_by("-created_at")
-    return render(request, "core/projects.html", {"projects": all_projects})
+    total_scans = all_projects.count()
+    completed = all_projects.filter(status="crawled").count()
+    in_progress = all_projects.filter(status__in=["pending", "crawling"]).count()
+    return render(request, "core/projects.html", {
+        "projects": all_projects,
+        "total_scans": total_scans,
+        "completed": completed,
+        "in_progress": in_progress,
+    })
 
 @login_required
 def scans_list(request):
-    all_scans = Project.objects.filter(owner=request.user).order_by("-created_at")
-    total_scans = all_scans.count()
-    completed = all_scans.filter(status="crawled").count()
-    pending = all_scans.filter(status="pending").count()
-    return render(request, "core/scans.html", {"scans": all_scans, "total_scans": total_scans, "completed": completed, "pending": pending})
+    return redirect("projects")
 
 @login_required
 def pages_list(request):
