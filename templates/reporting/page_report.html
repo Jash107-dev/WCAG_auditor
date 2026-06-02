@@ -11,6 +11,34 @@
             <a href="{{ page.url }}" target="_blank" style="font-size:13px; color:#6c63ff; text-decoration:none; word-break:break-all;">{{ page.url }}</a>
         </div>
         <div style="display:flex; align-items:center; gap:10px;">
+            <!-- HTTP Status Code -->
+            {% if page.http_status %}
+            <div style="text-align:center; border-radius:10px; padding:8px 14px;
+                background:{% if page.http_status == 200 %}#d1fae5{% elif page.http_status >= 300 and page.http_status < 400 %}#dbeafe{% elif page.http_status >= 400 %}#fee2e2{% else %}#f0f2f5{% endif %};
+                border:1px solid {% if page.http_status == 200 %}#6ee7b7{% elif page.http_status >= 300 and page.http_status < 400 %}#93c5fd{% elif page.http_status >= 400 %}#fca5a5{% else %}#e2e8f0{% endif %};">
+                <div style="font-size:10px; font-weight:600; margin-bottom:2px;
+                    color:{% if page.http_status == 200 %}#065f46{% elif page.http_status >= 300 and page.http_status < 400 %}#1e40af{% elif page.http_status >= 400 %}#991b1b{% else %}#6b7280{% endif %};">
+                    HTTP
+                </div>
+                <div style="font-size:18px; font-weight:800;
+                    color:{% if page.http_status == 200 %}#38a169{% elif page.http_status >= 300 and page.http_status < 400 %}#3b82f6{% elif page.http_status >= 400 %}#e53e3e{% else %}#6b7280{% endif %};">
+                    {{ page.http_status }}
+                </div>
+                <div style="font-size:9px; font-weight:600;
+                    color:{% if page.http_status == 200 %}#38a169{% elif page.http_status >= 300 and page.http_status < 400 %}#3b82f6{% elif page.http_status >= 400 %}#e53e3e{% else %}#6b7280{% endif %};">
+                    {% if page.http_status == 200 %}OK
+                    {% elif page.http_status == 301 %}Moved
+                    {% elif page.http_status == 302 %}Redirect
+                    {% elif page.http_status == 400 %}Bad Request
+                    {% elif page.http_status == 401 %}Unauthorized
+                    {% elif page.http_status == 403 %}Forbidden
+                    {% elif page.http_status == 404 %}Not Found
+                    {% elif page.http_status == 500 %}Server Error
+                    {% elif page.http_status == 503 %}Unavailable
+                    {% else %}Status{% endif %}
+                </div>
+            </div>
+            {% endif %}
             <!-- Compliance Score -->
             <div style="text-align:center; background:#f8f9fa; border-radius:10px; padding:8px 16px; min-width:80px;">
                 <div style="font-size:10px; color:#8892b0; font-weight:600; margin-bottom:2px;">SCORE</div>

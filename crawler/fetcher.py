@@ -44,18 +44,17 @@ def fetch_with_playwright(url: str) -> str | None:
         return None
 
 
-def fetch_with_requests(url: str) -> str | None:
+def fetch_with_requests(url: str) -> tuple[str | None, int | None]:
     """
     Fetch raw HTML using requests (fast, no JS rendering).
-    Returns HTML string or None on failure.
+    Returns (HTML string, status_code) or (None, None) on failure.
     """
     try:
-        resp = _requests.get(url, timeout=TIMEOUT, headers=HEADERS)
-        resp.raise_for_status()
-        return resp.text
+        resp = _requests.get(url, timeout=TIMEOUT, headers=HEADERS, allow_redirects=True)
+        return resp.text, resp.status_code
     except Exception as e:
         logger.warning(f"requests fetch failed for {url}: {e}")
-        return None
+        return None, None
 
 
 def _is_js_app(html: str) -> bool:
@@ -75,7 +74,7 @@ def _is_js_app(html: str) -> bool:
     return len(text) < 200
 
 
-def fetch_page(url: str, force_playwright: bool = False) -> tuple[str, str]:
+def fetch_page(url: str, force_playwright: bool = False) -> tuple[str, str, int | None]:
     """
     Fetch a page using the best available method.
 
@@ -84,20 +83,22 @@ def fetch_page(url: str, force_playwright: bool = False) -> tuple[str, str]:
       2. If result looks like a JS shell OR force_playwright=True → use Playwright
       3. If Playwright fails → return whatever requests got
 
-    Returns: (html, method_used)
+    Returns: (html, method_used, http_status_code)
       method_used is "playwright" or "requests"
+      http_status_code is the HTTP response code (e.g. 200, 301, 404) or None
     """
     # Step 1: fast fetch
-    html = fetch_with_requests(url)
+    html, status_code = fetch_with_requests(url)
 
     # Step 2: check if JS rendering needed
     if force_playwright or _is_js_app(html or ""):
         logger.info(f"JS app detected or forced — using Playwright for {url}")
         pw_html = fetch_with_playwright(url)
         if pw_html:
-            return pw_html, "playwright"
+            # Keep the status_code from requests (Playwright doesn't expose it easily)
+            return pw_html, "playwright", status_code
         # Playwright failed — fall back to whatever requests got
         logger.warning(f"Playwright failed, using requests fallback for {url}")
-        return (html or ""), "requests"
+        return (html or ""), "requests", status_code
 
-    return (html or ""), "requests"
+    return (html or ""), "requests", status_code

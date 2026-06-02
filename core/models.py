@@ -46,6 +46,7 @@ class Page(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     url = models.URLField(max_length=2000)
     html_snapshot = models.TextField()
+    http_status = models.IntegerField(null=True, blank=True)
     status = models.CharField(max_length=20, default="pending")
     compliance_score = models.IntegerField(default=100)
     llm_status = models.CharField(

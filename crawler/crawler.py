@@ -86,7 +86,7 @@ def crawl(start_url, project_id=None, scope=SCOPE_FULL, use_llm=False):
 
     elif scope == SCOPE_MAIN:
         try:
-            homepage_html, _ = fetch_page(start_url)
+            homepage_html, _, _ = fetch_page(start_url)
         except Exception as e:
             print(f"Failed to fetch homepage: {e}")
             proj.status = "crawled"
@@ -132,12 +132,12 @@ def crawl(start_url, project_id=None, scope=SCOPE_FULL, use_llm=False):
         print(f"Crawling ({len(visited)}): {url}")
 
         try:
-            html, fetch_method = fetch_page(url)
-            print(f"  Fetched via {fetch_method} ({len(html)} chars)")
+            html, fetch_method, http_status = fetch_page(url)
+            print(f"  Fetched via {fetch_method} ({len(html)} chars) [HTTP {http_status}]")
 
             pg, created = Page.objects.update_or_create(
                 project=proj, url=url,
-                defaults={"html_snapshot": html, "status": "pending", "llm_status": "pending"}
+                defaults={"html_snapshot": html, "status": "pending", "llm_status": "pending", "http_status": http_status}
             )
 
             try:
