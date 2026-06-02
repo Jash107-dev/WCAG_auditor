@@ -21,7 +21,7 @@ class Command(BaseCommand):
         f.close()
 
         for rule in rules_data:
-            Rule.objects.get_or_create(
+            Rule.objects.update_or_create(
                 wcag_id=rule['wcag_id'],
                 defaults={
                     'title': rule['title'],

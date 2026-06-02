@@ -151,13 +151,13 @@ def export_pdf(request, project_id):
     for issue in all_issues[:100]:
         issue_data.append([
             safe_para(issue.page.url, small_style, max_len=60),
-            issue.rule.wcag_id,
-            issue.severity,
+            safe_para(issue.rule.wcag_id, small_style),
+            safe_para(issue.severity, small_style),
             safe_para(issue.message, small_style, max_len=120),
         ])
 
     if len(issue_data) > 1:
-        issue_tbl = Table(issue_data, colWidths=[2*inch, 0.7*inch, 0.8*inch, 3*inch])
+        issue_tbl = Table(issue_data, colWidths=[1.8*inch, 1.1*inch, 0.9*inch, 2.7*inch])
         issue_tbl.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1a1f36")),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
@@ -168,6 +168,7 @@ def export_pdf(request, project_id):
             ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
             ("PADDING", (0, 0), (-1, -1), 5),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("WORDWRAP", (0, 0), (-1, -1), True),
         ]))
         story.append(issue_tbl)
     else:

@@ -22,6 +22,7 @@ class Project(models.Model):
     domain = models.URLField()
     wcag_level = models.CharField(max_length=10)
     status = models.CharField(max_length=20, default="pending")
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="projects", null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     current_page = models.TextField(blank=True, null=True)
     pages_crawled = models.IntegerField(default=0)

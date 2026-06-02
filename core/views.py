@@ -26,7 +26,7 @@ def home(request):
             url = 'https://' + url
 
         use_llm = (scan_mode == "ai")
-        new_project = Project.objects.create(domain=url, wcag_level=level, status="pending")
+        new_project = Project.objects.create(domain=url, wcag_level=level, status="pending", owner=request.user)
 
         dispatched = _dispatch_crawl(url, new_project.id, scope, use_llm)
         if not dispatched:
@@ -124,7 +124,7 @@ def dashboard(request, project_id):
         moderate_pct = 0
         minor_pct = 0
     top_issues = all_issues.values("page_id", "rule__wcag_id", "rule__title", "severity", "rule__logic").annotate(affected_pages=Count("page", distinct=True)).order_by("-affected_pages")[:5]
-    recent_scans = Project.objects.order_by("-created_at")[:5]
+    recent_scans = Project.objects.filter(owner=request.user).order_by("-created_at")[:5]
     if percent_compliant >= 80:
         ada_status = "compliant"
         ada_msg = "This site aligns with ADA accessibility expectations based on WCAG " + proj.wcag_level + " checks."
@@ -135,12 +135,12 @@ def dashboard(request, project_id):
 
 @login_required
 def projects_list(request):
-    all_projects = Project.objects.order_by("-created_at")
+    all_projects = Project.objects.filter(owner=request.user).order_by("-created_at")
     return render(request, "core/projects.html", {"projects": all_projects})
 
 @login_required
 def scans_list(request):
-    all_scans = Project.objects.order_by("-created_at")
+    all_scans = Project.objects.filter(owner=request.user).order_by("-created_at")
     total_scans = all_scans.count()
     completed = all_scans.filter(status="crawled").count()
     pending = all_scans.filter(status="pending").count()
@@ -148,7 +148,7 @@ def scans_list(request):
 
 @login_required
 def pages_list(request):
-    all_pages = Page.objects.select_related("project").order_by("-id")
+    all_pages = Page.objects.filter(project__owner=request.user).select_related("project").order_by("-id")
     total = all_pages.count()
     passed = all_pages.filter(status="pass").count()
     failed = all_pages.filter(status="fail").count()
@@ -156,7 +156,7 @@ def pages_list(request):
 
 @login_required
 def issues_all(request):
-    all_issues = Issue.objects.select_related("rule", "page", "page__project").order_by("-page__project__created_at", "page__project_id", "-id")
+    all_issues = Issue.objects.filter(page__project__owner=request.user).select_related("rule", "page", "page__project").order_by("-page__project__created_at", "page__project_id", "-id")
     total = all_issues.count()
     critical = all_issues.filter(severity="critical").count()
     serious = all_issues.filter(severity="serious").count()
@@ -183,7 +183,7 @@ def rules_list(request):
 
 @login_required
 def reports_list(request):
-    done_projects = Project.objects.exclude(status="pending").annotate(
+    done_projects = Project.objects.filter(owner=request.user).exclude(status="pending").annotate(
         issue_count=Count("page__issue")
     ).order_by("-created_at")
     return render(request, "core/reports.html", {"projects": done_projects})

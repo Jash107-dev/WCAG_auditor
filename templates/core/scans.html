@@ -44,7 +44,7 @@
                 <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Pages</th>
                 <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Status</th>
                 <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Date</th>
-                <th style="padding:10px;"></th>
+                <th style="text-align:left; padding:10px; color:#8892b0; font-weight:600;">Action</th>
             </tr>
         </thead>
         <tbody>
@@ -53,14 +53,24 @@
                 <td style="padding:10px; color:#8892b0;">{{ forloop.counter }}</td>
                 <td style="padding:10px; font-weight:600; color:#1a1f36;">{{ scan.domain|truncatechars:35 }}</td>
                 <td style="padding:10px;">
-                    <span style="background:#ede9fe; color:#6c63ff; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600;">{{ scan.wcag_level }} Level</span>
+                    {% if scan.wcag_level == "A" %}
+                        <span style="background:#d1fae5; color:#38a169; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600;">A Level</span>
+                    {% elif scan.wcag_level == "AA" %}
+                        <span style="background:#ede9fe; color:#6c63ff; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600;">AA Level</span>
+                    {% elif scan.wcag_level == "AAA" %}
+                        <span style="background:#fee2e2; color:#e53e3e; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600;">AAA Level</span>
+                    {% else %}
+                        <span style="background:#ede9fe; color:#6c63ff; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600;">{{ scan.wcag_level }} Level</span>
+                    {% endif %}
                 </td>
                 <td style="padding:10px; color:#4a5568;">{{ scan.page_set.count }}</td>
                 <td style="padding:10px;">
                     {% if scan.status == "crawled" %}
                         <span class="status-completed">Completed</span>
+                    {% elif scan.status == "crawling" %}
+                        <span style="background:#dbeafe; color:#1d4ed8; padding:2px 8px; border-radius:20px; font-size:12px; font-weight:600;">🔄 Crawling</span>
                     {% elif scan.status == "pending" %}
-                        <span class="status-pending">Pending</span>
+                        <a href="/dashboard/{{ scan.id }}/" style="background:#fffbeb; color:#b7791f; padding:2px 8px; border-radius:20px; font-size:12px; font-weight:600; text-decoration:none;">▶ Continue Scanning</a>
                     {% else %}
                         <span style="color:#8892b0;">{{ scan.status }}</span>
                     {% endif %}

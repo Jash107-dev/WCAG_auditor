@@ -73,10 +73,14 @@
                 <td style="padding:10px; color:#8892b0;">{{ project.created_at|date:"M d, Y" }}</td>
                 <td style="padding:10px;">
                     <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                        <a href="/dashboard/{{ project.id }}/" class="btn-outline" style="padding:4px 10px; font-size:12px;">Dashboard</a>
-                        <a href="/reporting/ada/{{ project.id }}/" class="btn-outline" style="padding:4px 10px; font-size:12px;">⚖️ ADA</a>
-                        <a href="/reporting/export/pdf/{{ project.id }}/" class="btn-outline" style="padding:4px 10px; font-size:12px;">📄 PDF</a>
-                        <a href="/export/csv/{{ project.id }}/" class="btn-outline" style="padding:4px 10px; font-size:12px;">📊 CSV</a>
+                        {% if project.status == "crawling" or project.status == "pending" %}
+                            <a href="/dashboard/{{ project.id }}/" class="btn-primary" style="padding:4px 12px; font-size:12px;">▶ Continue Scan</a>
+                        {% else %}
+                            <a href="/dashboard/{{ project.id }}/" class="btn-outline" style="padding:4px 10px; font-size:12px;">Dashboard</a>
+                            <a href="/reporting/ada/{{ project.id }}/" class="btn-outline" style="padding:4px 10px; font-size:12px;">⚖️ ADA</a>
+                            <a href="/reporting/export/pdf/{{ project.id }}/" class="btn-outline" style="padding:4px 10px; font-size:12px;">📄 PDF</a>
+                            <a href="/export/csv/{{ project.id }}/" class="btn-outline" style="padding:4px 10px; font-size:12px;">📊 CSV</a>
+                        {% endif %}
                     </div>
                 </td>
             </tr>
