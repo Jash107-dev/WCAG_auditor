@@ -273,7 +273,3 @@ def terms_view(request):
 
 def privacy_view(request):
     return render(request, "auth/privacy.html")
-
-
-def test_wcag_page(request):
-    return render(request, "test_wcag.html")
