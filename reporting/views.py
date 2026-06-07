@@ -43,16 +43,23 @@ def ada_statement(request, project_id):
     all_issues = Issue.objects.filter(page__project=proj)
     total_issues = all_issues.count()
 
-    critical_page_ids = set(
-        all_issues.filter(severity="critical")
+    # New classification: non-compliant = critical OR serious
+    blocking_page_ids = set(
+        all_issues.filter(severity__in=["critical", "serious"])
         .values_list("page_id", flat=True).distinct()
     )
-    non_compliant_pages_count = len(critical_page_ids)
-    compliant_pages = total_pages - non_compliant_pages_count
+    any_issue_page_ids = set(
+        all_issues.values_list("page_id", flat=True).distinct()
+    )
+    non_compliant_pages_count = len(blocking_page_ids)
+    partial_pages_count = len(any_issue_page_ids - blocking_page_ids)
+    compliant_pages = total_pages - non_compliant_pages_count - partial_pages_count
     compliant_pages = max(0, compliant_pages)
 
+    # Weighted site score
     if total_pages > 0:
-        percent = round((compliant_pages / total_pages) * 100, 2)
+        page_scores = list(all_pages.values_list("compliance_score", flat=True))
+        percent = round(sum(page_scores) / len(page_scores), 1)
     else:
         percent = 0
 
@@ -62,6 +69,8 @@ def ada_statement(request, project_id):
         "project": proj,
         "total_pages": total_pages,
         "compliant_pages": compliant_pages,
+        "partial_pages": partial_pages_count,
+        "non_compliant_pages": non_compliant_pages_count,
         "total_issues": total_issues,
         "percent_compliant": percent,
         "is_compliant": is_compliant,
@@ -74,17 +83,32 @@ def export_pdf(request, project_id):
     all_issues = Issue.objects.filter(page__project=proj).select_related("rule", "page")
 
     total_pages = all_pages.count()
-    compliant_pages = all_pages.filter(status="pass").count()
     total_issues = all_issues.count()
     critical = all_issues.filter(severity="critical").count()
     serious = all_issues.filter(severity="serious").count()
     moderate = all_issues.filter(severity="moderate").count()
     minor = all_issues.filter(severity="minor").count()
 
+    # Weighted site score
     if total_pages > 0:
-        percent = round((compliant_pages / total_pages) * 100, 2)
+        page_scores = list(all_pages.values_list("compliance_score", flat=True))
+        percent = round(sum(page_scores) / len(page_scores), 1)
+        # Classification counts
+        blocking_page_ids = set(
+            all_issues.filter(severity__in=["critical", "serious"])
+            .values_list("page_id", flat=True).distinct()
+        )
+        any_issue_page_ids = set(
+            all_issues.values_list("page_id", flat=True).distinct()
+        )
+        non_compliant_count = len(blocking_page_ids)
+        partial_count = len(any_issue_page_ids - blocking_page_ids)
+        compliant_pages = total_pages - non_compliant_count - partial_count
     else:
         percent = 0
+        compliant_pages = 0
+        partial_count = 0
+        non_compliant_count = 0
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4,
@@ -114,8 +138,10 @@ def export_pdf(request, project_id):
     summ_data = [
         ["Metric", "Value"],
         ["Total Pages Scanned", str(total_pages)],
-        ["Compliant Pages", str(compliant_pages)],
-        ["Overall Compliance", str(percent) + "%"],
+        ["Compliant Pages (no issues)", str(compliant_pages)],
+        ["Partially Compliant (minor/moderate only)", str(partial_count)],
+        ["Non-Compliant (critical/serious issues)", str(non_compliant_count)],
+        ["Overall Site Score", str(percent) + "%"],
         ["Total Issues Found", str(total_issues)],
         ["Critical Issues", str(critical)],
         ["Serious Issues", str(serious)],

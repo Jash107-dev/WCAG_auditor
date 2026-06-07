@@ -86,29 +86,36 @@ def dashboard(request, project_id):
     all_issues = Issue.objects.filter(page__project=proj)
     total_issues = all_issues.count()
 
-    critical_page_ids = set(
-        all_issues.filter(severity="critical")
+    # New classification: non-compliant = critical OR serious issues on page
+    blocking_page_ids = set(
+        all_issues.filter(severity__in=["critical", "serious"])
         .values_list("page_id", flat=True).distinct()
     )
     any_issue_page_ids = set(
         all_issues.values_list("page_id", flat=True).distinct()
     )
 
-    non_compliant_pages = len(critical_page_ids)
-    partial_pages = len(any_issue_page_ids - critical_page_ids)
+    non_compliant_pages = len(blocking_page_ids)
+    partial_page_ids = any_issue_page_ids - blocking_page_ids
+    partial_pages = len(partial_page_ids)
     compliant_pages = total_pages - non_compliant_pages - partial_pages
     compliant_pages = max(0, compliant_pages)
-    pages_with_issues = all_pages.filter(status="fail").count()
+    pages_with_issues = non_compliant_pages + partial_pages
 
+    # Weighted site score = weighted average of per-page compliance scores
     if total_pages > 0:
-        percent_compliant = round((compliant_pages / total_pages) * 100, 2)
-        partial_percent = round((partial_pages / total_pages) * 100, 2)
-        non_compliant_percent = round((non_compliant_pages / total_pages) * 100, 2)
+        page_scores = list(all_pages.values_list("compliance_score", flat=True))
+        site_score = round(sum(page_scores) / len(page_scores), 1)
+        percent_compliant = site_score
+        partial_percent = round((partial_pages / total_pages) * 100, 1)
+        non_compliant_percent = round((non_compliant_pages / total_pages) * 100, 1)
     else:
         percent_compliant = 0
         partial_pages = 0
         partial_percent = 0
         non_compliant_percent = 0
+        site_score = 0
+
     critical_count = all_issues.filter(severity="critical").count()
     serious_count = all_issues.filter(severity="serious").count()
     moderate_count = all_issues.filter(severity="moderate").count()
@@ -123,15 +130,32 @@ def dashboard(request, project_id):
         serious_pct = 0
         moderate_pct = 0
         minor_pct = 0
+
     top_issues = all_issues.values("page_id", "rule__wcag_id", "rule__title", "severity", "rule__logic").annotate(affected_pages=Count("page", distinct=True)).order_by("-affected_pages")[:5]
     recent_scans = Project.objects.filter(owner=request.user).order_by("-created_at")[:5]
-    if percent_compliant >= 80:
+
+    if site_score >= 80:
         ada_status = "compliant"
         ada_msg = "This site aligns with ADA accessibility expectations based on WCAG " + proj.wcag_level + " checks."
     else:
         ada_status = "partial"
         ada_msg = "This site is PARTIALLY compliant with WCAG " + proj.wcag_level + ". " + str(pages_with_issues) + " pages have accessibility issues that need attention."
-    return render(request, "core/dashboard.html", {"project": proj, "pages": all_pages, "total_pages": total_pages, "compliant_pages": compliant_pages, "pages_with_issues": pages_with_issues, "non_compliant_pages": non_compliant_pages, "total_issues": total_issues, "percent_compliant": percent_compliant, "partial_pages": partial_pages, "partial_percent": partial_percent, "non_compliant_percent": non_compliant_percent, "critical_issues": critical_count, "serious_issues": serious_count, "moderate_issues": moderate_count, "minor_issues": minor_count, "critical_percent": critical_pct, "serious_percent": serious_pct, "moderate_percent": moderate_pct, "minor_percent": minor_pct, "top_issues": top_issues, "recent_scans": recent_scans, "ada_status": ada_status, "ada_message": ada_msg})
+
+    return render(request, "core/dashboard.html", {
+        "project": proj, "pages": all_pages,
+        "total_pages": total_pages, "compliant_pages": compliant_pages,
+        "pages_with_issues": pages_with_issues, "non_compliant_pages": non_compliant_pages,
+        "total_issues": total_issues, "percent_compliant": percent_compliant,
+        "partial_pages": partial_pages, "partial_percent": partial_percent,
+        "non_compliant_percent": non_compliant_percent,
+        "critical_issues": critical_count, "serious_issues": serious_count,
+        "moderate_issues": moderate_count, "minor_issues": minor_count,
+        "critical_percent": critical_pct, "serious_percent": serious_pct,
+        "moderate_percent": moderate_pct, "minor_percent": minor_pct,
+        "top_issues": top_issues, "recent_scans": recent_scans,
+        "ada_status": ada_status, "ada_message": ada_msg,
+        "site_score": site_score,
+    })
 
 @login_required
 def projects_list(request):

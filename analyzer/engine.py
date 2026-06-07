@@ -28,11 +28,29 @@ LLM_ENRICH_LIMIT = 5
 
 
 def calculate_compliance_score(issues: list) -> int:
+    """
+    Weighted per-page compliance score.
+    Critical=-25, Serious=-15, Moderate=-5, Minor=-1. Min=0.
+    """
     deductions = 0
     for issue in issues:
         sev = issue.get("severity", "minor") if isinstance(issue, dict) else getattr(issue, "severity", "minor")
-        deductions += {"critical": 20, "serious": 10, "moderate": 5, "minor": 2}.get(sev, 2)
+        deductions += {"critical": 25, "serious": 15, "moderate": 5, "minor": 1}.get(sev, 1)
     return max(0, 100 - deductions)
+
+
+def classify_page(issues: list) -> str:
+    """
+    Classify a page based on issue severity:
+    - 'non_compliant' if any critical or serious issues
+    - 'partial'       if only moderate/minor issues
+    - 'compliant'     if no issues
+    """
+    for issue in issues:
+        sev = issue.get("severity", "minor") if isinstance(issue, dict) else getattr(issue, "severity", "minor")
+        if sev in ("critical", "serious"):
+            return "non_compliant"
+    return "partial" if issues else "compliant"
 
 
 def get_or_create_rule(wcag_id: str) -> Rule:
@@ -126,7 +144,8 @@ def _run_llm_enrichment(page: Page, saved_issues: list, client) -> None:
 
         all_issues = list(page.issue_set.all())
         page.compliance_score = calculate_compliance_score(all_issues)
-        page.status = "fail" if all_issues else "pass"
+        classification = classify_page(all_issues)
+        page.status = "fail" if classification != "compliant" else "pass"
 
         page.llm_status = "done"
         page.save(update_fields=[
@@ -156,7 +175,8 @@ def analyze_page(page_id: int, use_llm: bool = True) -> bool:
     issues_found = run_all_checks(page.html_snapshot)
     saved_issues = _save_issues(page, issues_found, source="deterministic")
 
-    page.status = "fail" if issues_found else "pass"
+    classification = classify_page(issues_found)
+    page.status = "fail" if classification != "compliant" else "pass"
     page.compliance_score = calculate_compliance_score(issues_found)
     page.llm_status = "pending"
     page.save(update_fields=["status", "compliance_score", "llm_status"])
