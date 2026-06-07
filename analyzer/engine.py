@@ -29,14 +29,23 @@ LLM_ENRICH_LIMIT = 5
 
 def calculate_compliance_score(issues: list) -> int:
     """
-    Weighted per-page compliance score.
-    Critical=-25, Serious=-15, Moderate=-5, Minor=-1. Min=0.
+    Diminishing-returns compliance score using inverse weighting.
+    Formula: score = round(100 / (1 + weighted * 0.1))
+    Weights: critical=4, serious=2, moderate=1, minor=0.2
+    Never reaches 0 — a page with many issues still gets a low but non-zero score.
+    Examples:
+      0 issues        → 100
+      1 critical      → 71
+      1 serious       → 83
+      5 critical      → 33
+      9c+15s+81m+3mi  → ~6
     """
-    deductions = 0
+    weights = {"critical": 4, "serious": 2, "moderate": 1, "minor": 0.2}
+    weighted = 0.0
     for issue in issues:
         sev = issue.get("severity", "minor") if isinstance(issue, dict) else getattr(issue, "severity", "minor")
-        deductions += {"critical": 25, "serious": 15, "moderate": 5, "minor": 1}.get(sev, 1)
-    return max(0, 100 - deductions)
+        weighted += weights.get(sev, 0.2)
+    return round(100 / (1 + weighted * 0.1))
 
 
 def classify_page(issues: list) -> str:
