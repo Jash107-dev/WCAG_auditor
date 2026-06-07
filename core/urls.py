@@ -11,6 +11,7 @@ urlpatterns = [
     path("reset-password/<str:token>/", auth_views.reset_password_view, name="reset_password"),
     path("terms/", auth_views.terms_view, name="terms"),
     path("privacy/", auth_views.privacy_view, name="privacy"),
+    path("test/", auth_views.test_wcag_page, name="test_wcag"),
     path("send-otp/", auth_views.send_otp_view, name="send_otp"),
     path("verify-otp/", auth_views.verify_otp_view, name="verify_otp"),
 
