@@ -412,20 +412,20 @@ if (projectStatus === "crawling" || projectStatus === "pending") {
             if (data.status === "crawling") {
                 if (data.stop_requested) {
                     statusTxt.textContent = "Finishing current page, then stopping...";
-                    progressTxt.textContent = data.pages_crawled + " pages scanned";
+                    progressTxt.textContent = data.pages_crawled + (data.pages_crawled === 1 ? " page scanned" : " pages scanned");
                     bar.style.width = "95%";
                     if (stopBtn) { stopBtn.disabled = true; stopBtn.textContent = '⏳ Stopping...'; }
                 } else {
                     var percent = data.total_pages > 0 ? Math.round((data.pages_crawled / data.total_pages) * 100) : 10;
                     bar.style.width = Math.min(percent, 95) + "%";
                     statusTxt.textContent = "Crawling: " + (data.current_page || "...");
-                    progressTxt.textContent = data.pages_crawled + " pages scanned so far...";
+                    progressTxt.textContent = data.pages_crawled + (data.pages_crawled === 1 ? " page scanned so far..." : " pages scanned so far...");
                 }
             } else if (data.status === "crawled") {
                 clearInterval(checkInterval);
                 bar.style.width = "100%";
                 statusTxt.textContent = data.stop_requested
-                    ? "Scan stopped — " + data.pages_crawled + " pages scanned"
+                    ? "Scan stopped — " + data.pages_crawled + (data.pages_crawled === 1 ? " page scanned" : " pages scanned")
                     : "Scan complete!";
                 progressTxt.textContent = "Reloading...";
                 setTimeout(function() { window.location.reload(); }, 800);
