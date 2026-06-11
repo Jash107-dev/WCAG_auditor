@@ -17,7 +17,9 @@ import requests as _requests
 logger = logging.getLogger(__name__)
 
 HEADERS = {"User-Agent": "WCAGAuditor/1.0 (Accessibility Audit Bot)"}
-TIMEOUT = 15  # seconds
+REQUESTS_TIMEOUT = 8   # seconds — fast fetch timeout
+PLAYWRIGHT_TIMEOUT = 10000  # milliseconds — JS render timeout
+JS_TEXT_THRESHOLD = 500  # chars — below this = JS shell, use Playwright
 
 
 def fetch_with_playwright(url: str) -> str | None:
@@ -34,8 +36,8 @@ def fetch_with_playwright(url: str) -> str | None:
                 ignore_https_errors=True,
             )
             page = context.new_page()
-            # Wait until network is idle so JS has time to render
-            page.goto(url, wait_until="networkidle", timeout=TIMEOUT * 1000)
+            # domcontentloaded is much faster than networkidle
+            page.goto(url, wait_until="domcontentloaded", timeout=PLAYWRIGHT_TIMEOUT)
             html = page.content()
             browser.close()
             return html
@@ -50,7 +52,7 @@ def fetch_with_requests(url: str) -> tuple[str | None, int | None]:
     Returns (HTML string, status_code) or (None, None) on failure.
     """
     try:
-        resp = _requests.get(url, timeout=TIMEOUT, headers=HEADERS, allow_redirects=True)
+        resp = _requests.get(url, timeout=REQUESTS_TIMEOUT, headers=HEADERS, allow_redirects=True)
         return resp.text, resp.status_code
     except Exception as e:
         logger.warning(f"requests fetch failed for {url}: {e}")
@@ -70,8 +72,8 @@ def _is_js_app(html: str) -> bool:
     for tag in soup(["script", "style", "meta", "link"]):
         tag.decompose()
     text = soup.get_text(strip=True)
-    # If less than 200 chars of visible text, likely a JS shell
-    return len(text) < 200
+    # If less than JS_TEXT_THRESHOLD chars of visible text, likely a JS shell
+    return len(text) < JS_TEXT_THRESHOLD
 
 
 def fetch_page(url: str, force_playwright: bool = False) -> tuple[str, str, int | None]:
